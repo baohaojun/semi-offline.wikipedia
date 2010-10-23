@@ -1,0 +1,7 @@
+
+felix_ hi,  I'd like to submit a patch which would allow to use the mediawiki-Parser independent from a database-server
+felix_ we're developing a wikipedia-offline-reader and we need the mediawiki-parser to generate the installation-package
+felix_ if we could integrate a small patch (a variable $dont_use_db i.e. in LocalSettings.php), then this would make it significantly easier to use our generation-tools
+
+Sasa^Stefanovic felix_, try ti submit it to bugzilla
+Sasa^Stefanovic http://bugzilla.wikimedia.org

@@ -1,0 +1,24 @@
+<includeonly>{| class="metadata" style="margin-top:15pt;" |
+! colspan="2" | [[Hilfe:Personendaten|Personendaten]]
+ |-
+ {{#if: {{{NAME |}}} |
+   {{!}} class="metadata-label" {{!}} NAME {{!!}} style="font-variant: small-caps; font-weight: bold;" {{!}} {{{NAME }}} }}
+ |-
+ {{#if: {{{ALTERNATIVNAMEN |}}} |
+   {{!}} class="metadata-label" {{!}} ALTERNATIVNAMEN {{!!}} {{{ALTERNATIVNAMEN }}} }}
+ |-
+ {{#if: {{{KURZBESCHREIBUNG|}}} |
+   {{!}} class="metadata-label" {{!}} KURZBESCHREIBUNG{{!!}} {{{KURZBESCHREIBUNG}}} }}
+ |-
+ {{#if: {{{GEBURTSDATUM|}}} |
+   {{!}} class="metadata-label" {{!}} GEBURTSDATUM{{!!}} {{{GEBURTSDATUM}}} }}
+ |-
+ {{#if: {{{GEBURTSORT |}}} |
+   {{!}} class="metadata-label" {{!}} GEBURTSORT {{!!}} {{{GEBURTSORT }}} }}
+ |-
+ {{#if: {{{STERBEDATUM|}}} |
+   {{!}} class="metadata-label" {{!}} STERBEDATUM {{!!}} {{{STERBEDATUM}}} }}
+ |-
+ {{#if: {{{STERBEORT|}}} |
+   {{!}} class="metadata-label" {{!}} STERBEORT {{!!}} {{{STERBEORT}}} }}
+|}</includeonly>

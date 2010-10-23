@@ -1,0 +1,21 @@
+;; Object ParserFunctions/
+;; SEMANTICDB Tags save file
+(semanticdb-project-database-file "ParserFunctions/"
+  :tables (list 
+   (semanticdb-table "ParserFunctions.php"
+    :major-mode 'php-mode
+    :tags '(("$wgExtensionFunctions" variable (:dereference 1 :default-value "'wfSetupParserFunctions'" :type "int") nil [121 172]) ("$wgExtensionCredits" variable (:dereference 2 :default-value "array(
+	'name' => 'ParserFunctions',
+	'url' => 'http://meta.wikimedia.org/wiki/ParserFunctions',
+	'author' => 'Tim Starling',
+	'description' => 'Enhance parser with logical functions',
+)" :type "int") nil [173 398]) ("$wgHooks" variable (:dereference 2 :default-value "'wfParserFunctionsLanguageGetMagic'" :type "int") nil [400 475]) ("wfSetupParserFunctions" function (:type ("function" type (:type "class") nil nil)) nil [5735 6965]) ("wfParserFunctionsLanguageGetMagic" function (:arguments (("" variable (:type ("$magicWords" type (:type "class") nil nil)) (reparse-symbol arg-sub-list) [7012 7024]) ("" variable (:type ("$langCode" type (:type "class") nil nil)) (reparse-symbol arg-sub-list) [7025 7036])) :type ("function" type (:type "class") nil nil)) nil [6967 8188]))
+    :file "ParserFunctions.php"
+    :pointmax 8194
+    :unmatched-syntax 'nil
+    )
+   )
+  :file "semantic.cache"
+  :semantic-tag-version "2.0beta3"
+  :semanticdb-version "2.0beta3"
+  )

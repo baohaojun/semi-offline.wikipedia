@@ -1,0 +1,20 @@
+531a532
+> 					  //echo "mTagHooks[$tagName]={$this->mTagHooks[$tagName]}<br>";
+3854c3855,3859
+< 			$page = $dbr->tableName( 'page' );
+---
+> 			
+> 			// fnatter 2006-11-05
+> 			//$page = $dbr->tableName( 'page' );
+> 			$page = "page";
+> 			
+3897c3902,3903
+< 					$query .= $dbr->addQuotes( $this->mLinkHolders['dbkeys'][$key] );
+---
+>                                     // fnatter 2006-11-05
+> 					$query .= "'" . $this->mLinkHolders['dbkeys'][$key] . "'";
+3899a3906,3909
+> 
+>                       // fnatter 2006-11-05
+>                       $query = 0;
+> 
