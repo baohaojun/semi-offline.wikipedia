@@ -15,13 +15,18 @@ def article(request, article):
 	print line,
 	res = re.match(r'^(\d+%)\s\[([^\t]+)\t([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*\]$', line)
 	if res != None and res.group(2) == article.replace('_', ' '):
-	    cmd = """./show.pl %s %s %s %s %s %s""" % (res.group(3), 
-                                                       res.group(4),
-                                                       res.group(5),
-                                                       res.group(6),
-                                                       res.group(7),
-                                                       res.group(8)
-                                                       )
+	    cmd = """./show.pl "%s" %s %s %s %s %s %s %s %s %s""" % (
+            res.group(2),
+            res.group(3), 
+            res.group(4),
+            res.group(5),
+            res.group(6),
+            res.group(7),
+            res.group(8),
+            res.group(9),
+            res.group(10),
+            res.group(11),                                                                
+            )
 	    print cmd
 	    os.system(cmd)
 	    result = open("/var/tmp/result.html").read() 
@@ -83,3 +88,8 @@ def keyword(request, article):
 def searchbar(request):
     searchData = request.GET['data'].encode('utf-8')
     return keyword(request, searchData)
+# Local Variables: #
+# tab-width: 4 #
+# python-indent: 4 #
+# End: #
+ 

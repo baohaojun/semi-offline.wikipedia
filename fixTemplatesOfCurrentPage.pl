@@ -31,7 +31,9 @@ for my $template (keys %templates) {
     if ( ! -e "./mediawiki_sa/templates/$md5s.mwt") {
 	#system("wget -O /var/tmp/fixup.html http://localhost:8000/article/Template:".$template."/");
 	my $url = $templates{$template};
-	system("wget -O /var/tmp/fixup.html http://localhost:8000/$url/ >/dev/null 2>&1");
+        $url =~ s,/*$,/,;
+        print "wget -O /var/tmp/fixup.html http://localhost:8000/$url >/dev/null 2>&1\n";
+	system("wget -O /var/tmp/fixup.html http://localhost:8000/$url >/dev/null 2>&1");
 	if ($? == -1) {
         }
         elsif ($? & 127) {
@@ -42,22 +44,28 @@ for my $template (keys %templates) {
 		my $foundBadMsg = 0;
 		while(<HTML>) {
 		    if (/<h1>Choose one of the options below/) {
+                        print "hello $&\n";
 			$foundBadMsg = 1;
 			last;
 		    } elsif (/head><body>Wikipedia has nothing about this/) {
+                        print "hello $&\n";
 			$foundBadMsg = 1;
 			last;
 		    } elsif (/Warning.*::require.*failed to open stream/) {
+                        print "hello $&\n";
 			$foundBadMsg = 1;
 			last;
 		    }
 		}
 		close HTML;
 		if ($foundBadMsg == 0) {
-		    open DATA, "tail +2 /var/tmp/result |";
+                    system("mkdir -p ./mediawiki_sa/templates");
+		    open DATA, "tail -n +2 /var/tmp/result |";
 		    open TEMPLATE, ">./mediawiki_sa/templates/$md5s.mwt";   
 		    while(<DATA>) {
+                        print "before print\n";
 			print TEMPLATE LooseEntities($_);
+                        print "after print\n";
 		    }
 		    close DATA;
 		    close TEMPLATE;

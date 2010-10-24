@@ -18,7 +18,9 @@ quickstartsearch: quickstartsearch.cc
 	@g++ -o $@ $^ -lxapian
 
 index: quickstartindex
-	@rm -rf db/
+	@mkdir -p ~/wikipedia/db
+	@rm -f db
+	@ln -s ~/wikipedia/db . 
 	@cat ~/wikipedia/enwiki-latest-pages-articles.idx|./quickstartindex
 	@echo Index built - we are done
 	@echo To run your local wikipedia, just
