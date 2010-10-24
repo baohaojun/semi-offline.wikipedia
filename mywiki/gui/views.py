@@ -10,12 +10,18 @@ def article(request, article):
 	article = article[:-1]
     result = "Not found"
     print "Searching for exact article", article
-    print "./quickstartsearch db/ \"%s\"" % article.lower().replace('_', ' ')
-    for line in os.popen("./quickstartsearch db/ \"%s\"" % article.lower().replace('_', ' ')):
+    print "./quickstartsearch db/ \"%s\"" % article.replace('_', ' ')
+    for line in os.popen("./quickstartsearch db/ \"%s\"" % article.replace('_', ' ')):
 	print line,
-	res = re.match(r'^(\d+%)\s\[(rec[^:]+):(.+?)\]$', line)
-	if res != None and res.group(3) == article.replace('_', ' '):
-	    cmd = "./show.pl \"../wiki-splits/%s\" \"%s\"" % (res.group(2), res.group(3))
+	res = re.match(r'^(\d+%)\s\[([^\t]+)\t([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*\]$', line)
+	if res != None and res.group(2) == article.replace('_', ' '):
+	    cmd = """./show.pl %s %s %s %s %s %s""" % (res.group(3), 
+                                                       res.group(4),
+                                                       res.group(5),
+                                                       res.group(6),
+                                                       res.group(7),
+                                                       res.group(8)
+                                                       )
 	    print cmd
 	    os.system(cmd)
 	    result = open("/var/tmp/result.html").read() 
@@ -40,9 +46,12 @@ def search(request, article):
     else:
 	result = "<html><head><title>Choose one</title></head><body><h1>Choose one of the options below</h1>\n"
 	for line in lines:
-	    res = re.match(r'^(\d+%)\s\[(rec[^:]+):(.+?)\]$', line)
+            print "line is ", line
+            res = re.match(r'^(\d+%)\s\[([^\t]+)\t([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*\]$', line)
 	    if res != None:
-		result += "(%s) <A HREF=\"/article/%s\">%s</A><br/>\n" % (res.group(1), res.group(3), res.group(3))
+		result += "(%s) <A HREF=\"/article/%s\">%s</A><br/>\n" % (res.group(1), res.group(2), res.group(2))
+            else:
+                print "please check you regexp"
 	result += "</body></html>"
     return HttpResponse(result)
 
@@ -62,9 +71,12 @@ def keyword(request, article):
     else:
 	result = "<html><head><title>Choose one</title></head><body><h1>Choose one of the options below</h1>\n"
 	for line in lines:
-	    res = re.match(r'^(\d+%)\s\[(rec[^:]+):(.+?)\]$', line)
+            print "line is ", line
+            res = re.match(r'^(\d+%)\s\[([^\t]+)\t([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*([-0-9]+)\s*\]$', line)
 	    if res != None:
-		result += "(%s) <A HREF=\"/article/%s/\">%s</A><br/>\n" % (res.group(1), urllib.quote(res.group(3)), res.group(3))
+		result += "(%s) <A HREF=\"/article/%s/\">%s</A><br/>\n" % (res.group(1), urllib.quote(res.group(2)), res.group(2))
+            else:
+                print "res is null"
 	result += "</body></html>"
     return HttpResponse(result)
 

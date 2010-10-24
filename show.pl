@@ -12,55 +12,13 @@ sub LooseEntities {
 }
 
 sub ShowTopic {
-    (my $found, my $foundLine) = @_;
-    my $regexp = $foundLine;
+    my $foundLine = shift;
+    open (my $pipe, "-|", "python", "/home/bhj/windows-config/gcode/wikipediaDumpReader-0.2.10/get_article.py", @_);
     open RESULT, ">/var/tmp/result";
-    print RESULT "$foundLine\n";
-    my $getText = 0;
-    my $insideText = 0;
-    my $foundEndText = 0;
-    while(1) {
-	open XML, "bzip2 -cd \"$found\" |";
-	while(<XML>) {
-	    if (/<title>\Q$regexp\E<\/title>/) {
-		$getText = 1;
-	    }
-	    elsif (/<title>/) {
-		$getText = 0;
-	    }
-
-	    if ($getText) {
-		if (/<text ?[^>]*>(.*)<\/text>/) {
-		    print RESULT LooseEntities($1)."\n"; 
-		    $getText = 0; 
-		    $foundEndText = 1;
-		} 
-		elsif (/<text ?[^>]*>(.*)/) {
-		    print RESULT LooseEntities($1)."\n"; 
-		    $insideText = 1; 
-		}
-		elsif (($insideText) && (/(.*?)<\/text>$/)) {
-		    print RESULT LooseEntities($1)."\n";
-		    $insideText = 0;
-		    $getText = 0;
-		    $foundEndText = 1;
-		} elsif ($insideText) {
-		    print RESULT LooseEntities($_);
-		}
-	    }
-	}
-	close XML;
-	if ($foundEndText) {
-	    last;
-	} else {
-	    # Need the rest from the next bzip2 volume
-	    $found =~ m/rec(\d\d\d\d\d)/;
-	    my $nextNum = $1 + 1;
-	    $nextNum = sprintf "%05d", $nextNum;
-	    $found =~ s/rec\d\d\d\d\d/rec$nextNum/;
-	}
+    while(<$pipe>) {
+        print RESULT $_;
     }
-    close RESULT;
+
     system("cd ../mediawiki_sa/ && php5 testparser.php /var/tmp/result > /var/tmp/result.tmp");
     if (($? == -1) || ($? & 127) || ($? >> 8)) {
 	print "#### mediawiki_sa parser failed! report to woc.fslab.de ####\n";
@@ -82,7 +40,7 @@ sub ShowTopic {
     while(<IN>) {
 	if (/<body/) {
 	    print OUT;
-	    print OUT <<OEF;
+	    print OUT <<EOF;
 <script type="text/javascript">
 function DoSearch(form)
 {
@@ -96,7 +54,7 @@ Search for
 <br>
 <hr>
 </form>
-OEF
+EOF
 	    print OUT "<H1>".$foundLine."</H1>\n";
 	} else {
 	    print OUT;
@@ -106,7 +64,7 @@ OEF
     close OUT;
 }
 
-die "Usage: $0 file.bz2 title\n"
-    unless @ARGV == 2;
+die "Usage: $0  Article prev_block_num prev_block_byte prev_block_bit block_num block_byte block_bit block start len\n"
+    unless @ARGV == 10;
 
-ShowTopic($ARGV[0], $ARGV[1]);
+ShowTopic(@ARGV);

@@ -71,36 +71,52 @@ int main(int argc, char **argv)
         Xapian::WritableDatabase database("db/", Xapian::DB_CREATE_OR_OPEN);
 
 	string docId;
+        string block_addr;
+        string prev_block_addr;
 	while(1) {
 	    string title;
 	    if (cin.eof()) break;
 	    getline(cin, title);
 	    int l = title.length();
-	    if (l>4 && title[0] == '#' && title.substr(l-4, 4) == ".bz2") {
-		docId = title.substr(1, string::npos);	
-		continue;
+            if (l < 6)
+              continue;
+
+	    if (title.substr(0, 6) == "block:") {
+              prev_block_addr = block_addr;
+              block_addr = title.substr(7, string::npos);
+              if (prev_block_addr.empty()) {
+                prev_block_addr = block_addr;
+              }
+              // cout << "block_addr is " << block_addr << endl;
+              continue;
 	    }
 
-	    string Title = title;
-	    lowcase(title);
+            unsigned int title_end_pos = title.find('\t');
+	    string Title = title.substr(7, title_end_pos - 7);
+
+            string title_addr = title.substr(title.find('\t') + 1);
+            // cout << "title_addr is " << title_addr << endl;
+            title = Title;
 
 	    // Make the document
 	    Xapian::Document newdocument;
 
 	    // Target: filename and the exact title used
-	    string target = docId + string(":") + Title;
-	    if (target.length()>MAX_KEY)
-		target = target.substr(0, MAX_KEY);
+	    string target = title + "\t" + prev_block_addr + " " + block_addr + " " + title_addr;
+            //cout << "target is " << target << endl;
 	    newdocument.set_data(target);
 
-	    // 1st Source: the lowercased title
+	    // 1st Source: the title
 	    if (title.length() > MAX_KEY)
 		title = title.substr(0, MAX_KEY);
 	    newdocument.add_posting(title.c_str(), 1);
 
-	    vector<string> keywords;
-	    Tokenize(title, keywords, " ");
+	    lowcase(title);
 
+	    vector<string> keywords;
+            // cout << "title is " << title << endl;
+	    Tokenize(title, keywords, " ");
+            
 	    // 2nd source: All the title's lowercased words
 	    int cnt = 2;
 	    for (vector<string>::iterator it=keywords.begin(); it!=keywords.end(); it++) {
@@ -110,7 +126,7 @@ int main(int argc, char **argv)
 	    }
 
 	    try {
-		//cout << "Added " << title << endl;
+		// cout << "Added " << title << endl;
 		// Add the document to the database
 		database.add_document(newdocument);
 	    } catch(const Xapian::Error &error) {
