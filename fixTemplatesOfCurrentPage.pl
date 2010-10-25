@@ -23,10 +23,6 @@ while(<RES>) {
 close RES;
 for my $template (keys %templates) {
     print "Fixing $template... ";
-    if ($template =~ m/^Pp-/i) {
-	print "Not allowed\n";
-	next;
-    }
 
     my $md5s = Digest::MD5::md5_hex(lc($template));
     print "in $md5s\n";
