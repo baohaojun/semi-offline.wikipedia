@@ -1,24 +1,33 @@
 /* 7.0 - only fixes */
-/* content area */ 
+/* content area */
 /* workaround for various ie float bugs */
 
 /* This bit is needed to make links clickable... WTF */
-#column-content #content {
+div#column-content div#content {
 	margin-left: 12.2em;
 	margin-top: 3em;
 	height: 1%;
 }
 
-.rtl #column-one {
+.rtl div#column-one {
 	/* For some reason it tries to inherit the padding-top into every div,
 	 * and I can't figure out how to get it back off.
+	 * Margin works correctly for this use, though.
 	 */
 	padding-top: 0;
-}
-.rtl #column-one #p-navigation {
 	margin-top: 160px;
 }
 
+.rtl #bodyContent a.external {
+	background-image: url(external-rtl.png);
+	padding: 0 13px 0 0;
+}
+
+.rtl a.feedlink {
+	background-position: right;
+	padding-right: 0;
+	padding-left: 16px;
+}
 /* the tabs */
 
 #p-cactions {
@@ -69,7 +78,7 @@ div.tleft {
 */
 
 
-#footer li {
+div#footer li {
 	/* Work around bug with inline <li> tags with right margins and nowrap */
 	margin-right: 0;
 }

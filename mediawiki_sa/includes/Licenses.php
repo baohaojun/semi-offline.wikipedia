@@ -2,54 +2,46 @@
 /**
  * A License class for use on Special:Upload
  *
- * @package MediaWiki
- * @subpackage SpecialPage
+ * @ingroup SpecialPage
  *
  * @author Ævar Arnfjörð Bjarmason <avarab@gmail.com>
  * @copyright Copyright © 2005, Ævar Arnfjörð Bjarmason
  * @license http://www.gnu.org/copyleft/gpl.html GNU General Public License 2.0 or later
  */
 
-class Licenses {
-	/**#@+
-	 * @private
-	 */
+class Licenses extends HTMLFormField {
 	/**
 	 * @var string
 	 */
-	var $msg;
+	protected $msg;
 
 	/**
 	 * @var array
 	 */
-	var $licenses = array();
+	protected $licenses = array();
 
 	/**
 	 * @var string
 	 */
-	var $html;
+	protected $html;
 	/**#@-*/
 
 	/**
-	 * Constrictor
-	 *
-	 * @param $str String: the string to build the licenses member from, will use
-	 *                    wfMsgForContent( 'licenses' ) if null (default: null)
+	 * Constructor
 	 */
-	function Licenses( $str = null ) {
-		// PHP sucks, this should be possible in the constructor
-		$this->msg = is_null( $str ) ? wfMsgForContent( 'licenses' ) : $str;
-		$this->html = '';
+	public function __construct( $params ) {
+		parent::__construct( $params );
+		
+		$this->msg = empty( $params['licenses'] ) ? wfMsgForContent( 'licenses' ) : $params['licenses'];
+		$this->selected = null;
 
 		$this->makeLicenses();
-		$tmp = $this->getLicenses();
-		$this->makeHtml( $tmp );
 	}
 
 	/**#@+
 	 * @private
 	 */
-	function makeLicenses() {
+	protected function makeLicenses() {
 		$levels = array();
 		$lines = explode( "\n", $this->msg );
 
@@ -63,29 +55,25 @@ class Licenses {
 					$obj = new License( $line );
 					$this->stackItem( $this->licenses, $levels, $obj );
 				} else {
-					if ( $level < count( $levels ) )
+					if ( $level < count( $levels ) ) {
 						$levels = array_slice( $levels, 0, $level );
-					if ( $level == count( $levels ) )
+					}
+					if ( $level == count( $levels ) ) {
 						$levels[$level - 1] = $line;
-					else if ( $level > count( $levels ) )
+					} else if ( $level > count( $levels ) ) {
 						$levels[] = $line;
+					}
 				}
 			}
 		}
 	}
 
-	function trimStars( $str ) {
-		$i = $count = 0;
-
-		wfSuppressWarnings();
-		while ($str[$i++] == '*')
-			++$count;
-		wfRestoreWarnings();
-
-		return array( $count, ltrim( $str, '* ' ) );
+	protected function trimStars( $str ) {
+		$numStars = strspn( $str, '*' );
+		return array( $numStars, ltrim( substr( $str, $numStars ), ' ' ) );
 	}
 
-	function stackItem( &$list, $path, $item ) {
+	protected function stackItem( &$list, $path, $item ) {
 		$position =& $list;
 		if ( $path )
 			foreach( $path as $key )
@@ -93,13 +81,12 @@ class Licenses {
 		$position[] = $item;
 	}
 
-	function makeHtml( &$tagset, $depth = 0 ) {
+	protected function makeHtml( $tagset, $depth = 0 ) {
 		foreach ( $tagset as $key => $val )
 			if ( is_array( $val ) ) {
 				$this->html .= $this->outputOption(
-					$this->msg( $key ),
+					$this->msg( $key ), '',
 					array(
-						'value' => '',
 						'disabled' => 'disabled',
 						'style' => 'color: GrayText', // for MSIE
 					),
@@ -108,22 +95,22 @@ class Licenses {
 				$this->makeHtml( $val, $depth + 1 );
 			} else {
 				$this->html .= $this->outputOption(
-					$this->msg( $val->text ),
-					array(
-						'value' => $val->template,
-						'title' => '{{' . $val->template . '}}'
-					),
+					$this->msg( $val->text ), $val->template,
+					array( 'title' => '{{' . $val->template . '}}' ),
 					$depth
 				);
 			}
 	}
 
-	function outputOption( $val, $attribs = null, $depth ) {
-		$val = str_repeat( /* &nbsp */ "\xc2\xa0", $depth * 2 ) . $val;
-		return str_repeat( "\t", $depth ) . wfElement( 'option', $attribs, $val ) . "\n";
+	protected function outputOption( $text, $value, $attribs = null, $depth = 0 ) {
+		$attribs['value'] = $value;
+		if ( $value === $this->selected )
+			$attribs['selected'] = 'selected';		
+		$val = str_repeat( /* &nbsp */ "\xc2\xa0", $depth * 2 ) . $text;
+		return str_repeat( "\t", $depth ) . Xml::element( 'option', $attribs, $val ) . "\n";
 	}
 
-	function msg( $str ) {
+	protected function msg( $str ) {
 		$out = wfMsg( $str );
 		return wfEmptyMsg( $str, $out ) ? $str : $out;
 	}
@@ -135,16 +122,34 @@ class Licenses {
 	 *
 	 * @return array
 	 */
-	function getLicenses() { return $this->licenses; }
+	public function getLicenses() { return $this->licenses; }
 
 	/**
 	 * Accessor for $this->html
 	 *
 	 * @return string
 	 */
-	function getHtml() { return $this->html; }
+	public function getInputHTML( $value ) {
+		$this->selected = $value;
+		
+		$this->html = $this->outputOption( wfMsg( 'nolicense' ), '',
+			(bool)$this->selected ? null : array( 'selected' => 'selected' ) );
+		$this->makeHtml( $this->getLicenses() );
+		
+		$attribs = array(
+			'name' => $this->mName,
+			'id' => $this->mID
+		);
+		if ( !empty( $this->mParams['disabled'] ) )
+			$attibs['disabled'] = 'disabled';
+		
+		return Html::rawElement( 'select', $attribs, $this->html );
+	}
 }
 
+/**
+ * A License class for use on Special:Upload (represents a single type of license).
+ */
 class License {
 	/**
 	 * @var string
@@ -161,11 +166,10 @@ class License {
 	 *
 	 * @param $str String: license name??
 	 */
-	function License( $str ) {
+	function __construct( $str ) {
 		list( $text, $template ) = explode( '|', strrev( $str ), 2 );
 
 		$this->template = strrev( $template );
 		$this->text = strrev( $text );
 	}
 }
-?>

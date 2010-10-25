@@ -1,34 +1,39 @@
 <?php
-# Basic support for outputting syndication feeds in RSS, other formats
-#
-# Copyright (C) 2004 Brion Vibber <brion@pobox.com>
-# http://www.mediawiki.org/
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-# http://www.gnu.org/copyleft/gpl.html
-
 /**
+ * Basic support for outputting syndication feeds in RSS, other formats.
+ *
  * Contain a feed class as well as classes to build rss / atom ... feeds
  * Available feeds are defined in Defines.php
- * @package MediaWiki
+ *
+ * Copyright © 2004 Brion Vibber <brion@pobox.com>
+ * http://www.mediawiki.org/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * http://www.gnu.org/copyleft/gpl.html
+ *
+ * @file
  */
 
+/**
+ * @defgroup Feed Feed
+ */
 
 /**
- * @todo document
- * @package MediaWiki
+ * A base class for basic support for outputting syndication feeds in RSS and other formats.
+ *
+ * @ingroup Feed
  */
 class FeedItem {
 	/**#@+
@@ -40,45 +45,144 @@ class FeedItem {
 	var $Url = '';
 	var $Date = '';
 	var $Author = '';
+	var $UniqueId = '';
+	var $RSSIsPermalink;
 	/**#@-*/
 
-	/**#@+
-	 * @todo document
+	/**
+	 * Constructor
+	 *
+	 * @param $Title String: Item's title
+	 * @param $Description String
+	 * @param $Url String: URL uniquely designating the item.
+	 * @param $Date String: Item's date
+	 * @param $Author String: Author's user name
+	 * @param $Comments String
 	 */
-	function FeedItem( $Title, $Description, $Url, $Date = '', $Author = '', $Comments = '' ) {
+	function __construct( $Title, $Description, $Url, $Date = '', $Author = '', $Comments = '' ) {
 		$this->Title = $Title;
 		$this->Description = $Description;
 		$this->Url = $Url;
+		$this->UniqueId = $Url;
+		$this->RSSIsPermalink = false;
 		$this->Date = $Date;
 		$this->Author = $Author;
 		$this->Comments = $Comments;
 	}
 
 	/**
-	 * @static
+	 * Encode $string so that it can be safely embedded in a XML document
+	 *
+	 * @param $string String: string to encode
+	 * @return String
 	 */
-	function xmlEncode( $string ) {
+	public function xmlEncode( $string ) {
 		$string = str_replace( "\r\n", "\n", $string );
 		$string = preg_replace( '/[\x00-\x08\x0b\x0c\x0e-\x1f]/', '', $string );
 		return htmlspecialchars( $string );
 	}
 
-	function getTitle() { return $this->xmlEncode( $this->Title ); }
-	function getUrl() { return $this->xmlEncode( $this->Url ); }
-	function getDescription() { return $this->xmlEncode( $this->Description ); }
-	function getLanguage() {
-		global $wgContLanguageCode;
-		return $wgContLanguageCode;
+	/**
+	 * Get the unique id of this item
+	 *
+	 * @return String
+	 */
+	public function getUniqueId() {
+		if ( $this->UniqueId ) {
+			return $this->xmlEncode( $this->UniqueId );
+		}
 	}
-	function getDate() { return $this->Date; }
-	function getAuthor() { return $this->xmlEncode( $this->Author ); }
-	function getComments() { return $this->xmlEncode( $this->Comments ); }
+
+	/**
+	 * set the unique id of an item
+	 *
+	 * @param $uniqueId String: unique id for the item
+	 * @param $RSSisPermalink Boolean: set to true if the guid (unique id) is a permalink (RSS feeds only)
+	 */
+	public function setUniqueId($uniqueId, $RSSisPermalink = False) {
+		$this->UniqueId = $uniqueId;
+		$this->RSSIsPermalink = $isPermalink;
+	}
+
+	/**
+	 * Get the title of this item; already xml-encoded
+	 *
+	 * @return String
+	 */
+	public function getTitle() {
+		return $this->xmlEncode( $this->Title );
+	}
+
+	/**
+	 * Get the URL of this item; already xml-encoded
+	 *
+	 * @return String
+	 */
+	public function getUrl() {
+		return $this->xmlEncode( $this->Url );
+	}
+
+	/**
+	 * Get the description of this item; already xml-encoded
+	 *
+	 * @return String
+	 */
+	public function getDescription() {
+		return $this->xmlEncode( $this->Description );
+	}
+
+	/**
+	 * Get the language of this item
+	 *
+	 * @return String
+	 */
+	public function getLanguage() {
+		global $wgLanguageCode;
+		return $wgLanguageCode;
+	}
+
+	/**
+	 * Get the title of this item
+	 *
+	 * @return String
+	 */
+	public function getDate() {
+		return $this->Date;
+	}
+
+	/**
+	 * Get the author of this item; already xml-encoded
+	 *
+	 * @return String
+	 */
+	public function getAuthor() {
+		return $this->xmlEncode( $this->Author );
+	}
+
+	/**
+	 * Get the comment of this item; already xml-encoded
+	 *
+	 * @return String
+	 */
+	public function getComments() {
+		return $this->xmlEncode( $this->Comments );
+	}
+
+	/**
+	 * Quickie hack... strip out wikilinks to more legible form from the comment.
+	 *
+	 * @param $text String: wikitext
+	 * @return String
+	 */
+	public static function stripComment( $text ) {
+		return preg_replace( '/\[\[([^]]*\|)?([^]]+)\]\]/', '\2', $text );
+	}
 	/**#@-*/
 }
 
 /**
- * @todo document
- * @package MediaWiki
+ * @todo document (needs one-sentence top-level class description).
+ * @ingroup Feed
  */
 class ChannelFeed extends FeedItem {
 	/**#@+
@@ -116,10 +220,8 @@ class ChannelFeed extends FeedItem {
 	 *
 	 * This should be called from the outHeader() method,
 	 * but can also be called separately.
-	 *
-	 * @public
 	 */
-	function httpHeaders() {
+	public function httpHeaders() {
 		global $wgOut;
 
 		# We take over from $wgOut, excepting its cache header info
@@ -149,26 +251,28 @@ class ChannelFeed extends FeedItem {
 	 * @private
 	 */
 	function outXmlHeader() {
-		global $wgServer, $wgStylePath;
+		global $wgStylePath, $wgStyleVersion;
 
 		$this->httpHeaders();
-		echo '<?xml version="1.0" encoding="utf-8"?>' . "\n";
+		echo '<?xml version="1.0"?>' . "\n";
 		echo '<?xml-stylesheet type="text/css" href="' .
-			htmlspecialchars( "$wgServer$wgStylePath/common/feed.css" ) . '"?' . ">\n";
+			htmlspecialchars( wfExpandUrl( "$wgStylePath/common/feed.css?$wgStyleVersion" ) ) .
+			'"?' . ">\n";
 	}
 }
 
 /**
  * Generate a RSS feed
- * @todo document
- * @package MediaWiki
+ *
+ * @ingroup Feed
  */
 class RSSFeed extends ChannelFeed {
 
 	/**
 	 * Format a date given a timestamp
-	 * @param integer $ts Timestamp
-	 * @return string Date string
+	 *
+	 * @param $ts Integer: timestamp
+	 * @return String: date string
 	 */
 	function formatTime( $ts ) {
 		return gmdate( 'D, d M Y H:i:s \G\M\T', wfTimestamp( TS_UNIX, $ts ) );
@@ -194,13 +298,14 @@ class RSSFeed extends ChannelFeed {
 
 	/**
 	 * Output an RSS 2.0 item
-	 * @param FeedItem item to be output
+	 * @param $item FeedItem: item to be output
 	 */
 	function outItem( $item ) {
 	?>
 		<item>
 			<title><?php print $item->getTitle() ?></title>
 			<link><?php print $item->getUrl() ?></link>
+			<guid<?php if( $item->RSSIsPermalink ) print ' isPermaLink="true"' ?>><?php print $item->getUniqueId() ?></guid>
 			<description><?php print $item->getDescription() ?></description>
 			<?php if( $item->getDate() ) { ?><pubDate><?php print $this->formatTime( $item->getDate() ) ?></pubDate><?php } ?>
 			<?php if( $item->getAuthor() ) { ?><dc:creator><?php print $item->getAuthor() ?></dc:creator><?php }?>
@@ -221,8 +326,8 @@ class RSSFeed extends ChannelFeed {
 
 /**
  * Generate an Atom feed
- * @todo document
- * @package MediaWiki
+ *
+ * @ingroup Feed
  */
 class AtomFeed extends ChannelFeed {
 	/**
@@ -283,7 +388,7 @@ class AtomFeed extends ChannelFeed {
 		global $wgMimeType;
 	?>
 	<entry>
-		<id><?php print $item->getUrl() ?></id>
+		<id><?php print $item->getUniqueId() ?></id>
 		<title><?php print $item->getTitle() ?></title>
 		<link rel="alternate" type="<?php print $wgMimeType ?>" href="<?php print $item->getUrl() ?>"/>
 		<?php if( $item->getDate() ) { ?>
@@ -306,5 +411,3 @@ class AtomFeed extends ChannelFeed {
 	</feed><?php
 	}
 }
-
-?>

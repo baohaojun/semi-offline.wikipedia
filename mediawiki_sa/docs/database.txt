@@ -2,28 +2,30 @@ Some information about database access in MediaWiki.
 By Tim Starling, January 2006.
 
 ------------------------------------------------------------------------
+    Database layout
+------------------------------------------------------------------------
+
+For information about the MediaWiki database layout, such as a 
+description of the tables and their contents, please see:
+  http://www.mediawiki.org/wiki/Manual:Database_layout
+  http://svn.wikimedia.org/viewvc/mediawiki/trunk/phase3/maintenance/tables.sql?view=markup
+
+
+------------------------------------------------------------------------
     API
 ------------------------------------------------------------------------
 
-For a database API reference, please see the auto-generated
-documentation:
-
-http://wikipedia.sourceforge.net/doc/MediaWiki/Database.html
-
 To make a read query, something like this usually suffices:
 
-$dbr =& wfGetDB( DB_SLAVE );
+$dbr = wfGetDB( DB_SLAVE );
 $res = $dbr->select( /* ...see docs... */ );
-while ( $row = $dbr->fetchObject( $res ) ) {
+foreach ( $res as $row ) {
 	...
 }
-$dbr->freeResult( $res );
-
-Note the assignment operator in the while condition.
 
 For a write query, use something like:
 
-$dbw =& wfGetDB( DB_MASTER );
+$dbw = wfGetDB( DB_MASTER );
 $dbw->insert( /* ...see docs... */ );
 
 We use the convention $dbr for read and $dbw for write to help you keep
@@ -69,7 +71,7 @@ want to write code destined for Wikipedia.
 It's often the case that the best algorithm to use for a given task
 depends on whether or not replication is in use. Due to our unabashed
 Wikipedia-centrism, we often just use the replication-friendly version,
-but if you like, you can use $wgLoadBalancer->getServerCount() > 1 to
+but if you like, you can use wfGetLB()->getServerCount() > 1 to
 check to see if replication is in use.
 
 === Lag ===
@@ -98,14 +100,14 @@ regularly lag by several minutes, making review of recent edits
 difficult.
 
 In addition to this, MediaWiki attempts to ensure that the user sees
-events occuring on the wiki in chronological order. A few seconds of lag
+events occurring on the wiki in chronological order. A few seconds of lag
 can be tolerated, as long as the user sees a consistent picture from
 subsequent requests. This is done by saving the master binlog position
 in the session, and then at the start of each request, waiting for the
 slave to catch up to that position before doing any reads from it. If
 this wait times out, reads are allowed anyway, but the request is
 considered to be in "lagged slave mode". Lagged slave mode can be
-checked by calling $wgLoadBalancer->getLaggedSlaveMode(). The only
+checked by calling wfGetLB()->getLaggedSlaveMode(). The only
 practical consequence at present is a warning displayed in the page
 footer.
 
@@ -152,13 +154,10 @@ Often this approach is not good enough, and it becomes necessary to
 enclose small groups of queries in their own transaction. Use the
 following syntax:
 
-$dbw =& wfGetDB( DB_MASTER );
-$dbw->immediateBegin();
+$dbw = wfGetDB( DB_MASTER );
+$dbw->begin();
 /* Do queries */
-$dbw->immediateCommit();
-
-There are functions called begin() and commit() but they don't do what
-you would expect. Don't use them.
+$dbw->commit();
 
 Use of locking reads (e.g. the FOR UPDATE clause) is not advised. They
 are poorly implemented in InnoDB and will cause regular deadlock errors.
@@ -172,3 +171,20 @@ queries, by using an appropriate condition in the WHERE clause of an
 UPDATE, or by using unique indexes in combination with INSERT IGNORE.
 Then use the affected row count to see if the query succeeded.
 
+------------------------------------------------------------------------
+    Supported DBMSs
+------------------------------------------------------------------------
+
+MediaWiki is written primarily for use with MySQL. Queries are optimized
+for it and its schema is considered the canonical version. However,
+MediaWiki does support the following other DBMSs to varying degrees.
+
+* PostgreSQL
+* SQLite
+* Oracle
+* IBM DB2
+* MSSQL
+
+More information can be found about each of these databases (known issues,
+level of support, extra configuration) in the "databases" subdirectory in
+this folder.

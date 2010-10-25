@@ -1,3 +1,0 @@
-home/felix/public_html/mediawiki_sa/includes/Parser.php on line 3854
- => replaceLinkHolders
-- Rechte Verzeichnisse für temp. math-bilder

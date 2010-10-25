@@ -34,6 +34,7 @@ if ( isset( $_REQUEST['GLOBALS'] ) ) {
 define( 'MEDIAWIKI', true );
 
 # Load up some global defines.
+
 require_once( './includes/Defines.php' );
 
 # Include this site setttings
@@ -41,6 +42,11 @@ require_once( './LocalSettings.php' );
 require_once("extensions/ParserFunctions/ParserFunctions.php");
 require_once( "extensions/Cite/Cite.php" );
 // load ParserFunctions extension
+if( file_exists("$IP/StartProfiler.php") ) {
+	require_once( "$IP/StartProfiler.php" );
+} else {
+	require_once( "$IP/includes/ProfilerStub.php" );
+}
 
 # Prepare MediaWiki
 require_once( 'includes/Setup.php' );
@@ -67,34 +73,7 @@ if ( $wgUseAjax && $action == 'ajax' ) {
 
 	exit;
 }
-/*
-$wgTitle = $mediaWiki->checkInitialQueries( $title,$action,$wgOut, $wgRequest, $wgContLang );
-if ($wgTitle == NULL) {
-	unset( $wgTitle );
-}
 
-wfProfileOut( 'main-misc-setup' );
-
-# Setting global variables in mediaWiki
-$mediaWiki->setVal( 'Server', $wgServer );
-$mediaWiki->setVal( 'DisableInternalSearch', $wgDisableInternalSearch );
-$mediaWiki->setVal( 'action', $action );
-$mediaWiki->setVal( 'SquidMaxage', $wgSquidMaxage );
-$mediaWiki->setVal( 'EnableDublinCoreRdf', $wgEnableDublinCoreRdf );
-$mediaWiki->setVal( 'EnableCreativeCommonsRdf', $wgEnableCreativeCommonsRdf );
-$mediaWiki->setVal( 'CommandLineMode', $wgCommandLineMode );
-$mediaWiki->setVal( 'UseExternalEditor', $wgUseExternalEditor );
-$mediaWiki->setVal( 'DisabledActions', $wgDisabledActions );
-
-
-$wgArticle = $mediaWiki->initialize ( $wgTitle, $wgOut, $wgUser, $wgRequest );
-$mediaWiki->finalCleanup ( $wgDeferredUpdateList, $wgLoadBalancer, $wgOut );
-
-# Not sure when $wgPostCommitUpdateList gets set, so I keep this separate from finalCleanup
-$mediaWiki->doUpdates( $wgPostCommitUpdateList );
-
-$mediaWiki->restInPeace( $wgLoadBalancer );
-*/
 ?>
 
 <?php
@@ -104,7 +83,7 @@ $mediaWiki->restInPeace( $wgLoadBalancer );
 // very useful for debugging:
 $wgShowExceptionDetails = true;
 
-include_once("includes/Parser.php");
+include_once("includes/parser/Parser.php");
 if (empty($argv[1]))
   $argv[1] = "intro.wikimarkup";
 
@@ -134,24 +113,35 @@ $wgExtParserFunctions = new ExtParserFunctions();
 // these lines are modified not to use references to $wgExtParserFunctions, as
 // I got problems on php5.1.6
 $p->setFunctionHook( 'expr', array( $wgExtParserFunctions, 'expr' ) );
-$p->setFunctionHook( 'if', array( $wgExtParserFunctions, 'ifHook' ) );
+$p->setFunctionHook( 'if', array( $wgExtParserFunctions, 'if' ) );
 $p->setFunctionHook( 'ifeq', array( $wgExtParserFunctions, 'ifeq' ) );
 $p->setFunctionHook( 'ifexpr', array( $wgExtParserFunctions, 'ifexpr' ) );
-$p->setFunctionHook( 'switch', array( $wgExtParserFunctions, 'switchHook' ) );
+$p->setFunctionHook( 'iferror', array( $wgExtParserFunctions, 'iferror' ) );
+$p->setFunctionHook( 'switch', array( $wgExtParserFunctions, 'switch' ) );
+$p->setFunctionHook( 'default', array( $wgExtParserFunctions, 'default' ) );
 $p->setFunctionHook( 'ifexist', array( $wgExtParserFunctions, 'ifexist' ) );
 $p->setFunctionHook( 'time', array( $wgExtParserFunctions, 'time' ) );
+$p->setFunctionHook( 'timel', array( $wgExtParserFunctions, 'timel' ) );
 $p->setFunctionHook( 'rel2abs', array( $wgExtParserFunctions, 'rel2abs' ) );
+$p->setFunctionHook( 'titleparts', array( $wgExtParserFunctions, 'titleparts' ) );
+$p->setFunctionHook( 'len', array( $wgExtParserFunctions, 'len' ) );
+$p->setFunctionHook( 'pos', array( $wgExtParserFunctions, 'pos' ) );
+$p->setFunctionHook( 'rpos', array( $wgExtParserFunctions, 'rpos' ) );
+$p->setFunctionHook( 'sub', array( $wgExtParserFunctions, 'sub' ) );
+$p->setFunctionHook( 'count', array( $wgExtParserFunctions, 'count' ) );
+$p->setFunctionHook( 'replace', array( $wgExtParserFunctions, 'replace' ) );
+$p->setFunctionHook( 'explode', array( $wgExtParserFunctions, 'explode' ) );
+$p->setFunctionHook( 'urldecode', array( $wgExtParserFunctions, 'urldecode' ) );
+
 //echo "<pre>p.mFH=";print_r($p->mFunctionHooks['if']); echo"</pre>";
 $wgMessageCache->addMessage( 'pfunc_time_error', "Error: invalid time" );
 $wgMessageCache->addMessage( 'pfunc_time_too_long', "Error: too many #time calls" );
 $wgMessageCache->addMessage( 'pfunc_rel2abs_invalid_depth', "Error: Invalid depth in path: \"$1\" (tried to access a node above the root node)" );
 // this does not work for some reason...
-//$wgHooks['ParserClearState'][] = array( $wgExtParserFunctions, 'clearState' );
 
 
 $title = new Title();
 $options = new ParserOptions(null); // 1st arg: $user
-$options->setUseTeX(true);
 $options->setEditSection(false);
 //require('skins/CologneBlue.php');
 require('skins/Simple.php');

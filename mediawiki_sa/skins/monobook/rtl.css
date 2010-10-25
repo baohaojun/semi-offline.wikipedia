@@ -24,22 +24,26 @@ To test:
 */
 body {
 	direction: rtl;
-/*    unicode-bidi: bidi-override;*/
 	unicode-bidi: embed;
 }
-#column-content {
+div#column-content {
 	margin: 0 -12.2em 0 0;
 	float: left;
 }
-#column-content #content{
+div#column-content div#content{
 	margin-left: 0;
 	margin-right: 12.2em;
 	border-right: 1px solid #aaaaaa;
 	border-left: none;
 }
-html>body .portlet {
+html > body .portlet {
 	float: right;
 	clear: right;
+}
+.editsection {
+	float: left;
+	margin-right: 5px;
+	margin-left: 0; /* bug 9122: undo default LTR */
 }
 /* recover IEMac (might be fine with the float, but usually it's close to IE */
 *>body .portlet {
@@ -64,7 +68,6 @@ div div.thumbcaption {
 }
 
 div.magnify,
-#div.townBox,
 #p-logo {
 	left: auto;
 	right: 0;
@@ -130,14 +133,6 @@ div.tright, div.floatright, table.floatright {
 div.tleft, div.floatleft, table.floatleft {
 	clear: left;
 }
-div.townBox {
-	margin-left: 0;
-	margin-right: 1em;
-}
-div.townBox dl dd {
-	margin-left: 0;
-	margin-right: 1.1em;
-}
 #p-personal li {
 	margin-left: 0;
 	margin-right: 1em;
@@ -152,30 +147,39 @@ li#ca-watch {
 #p-personal li {
 	float: left;
 }
-/* Fix link icons */
-.external {
+/* Fix link icons
+.external, a.feedlink {
 	padding: 0 !important;
 	background: none !important;
 }
-#footer {
+*/
+div#footer {
 	clear: both;
 }
-* html #footer {
+#f-poweredbyico {
+	float: left;
+	height: 1%;
+}
+#f-copyrightico {
+	float: right;
+	height: 1%;
+}
+* html div#footer {
 	margin-left: 0;
 	margin-right: 13.6em;
 	border-left: 0;
 	border-right: 1px solid #fabd23;
-} 
-* html #column-content { 
+}
+* html div#column-content {
 	float: none;
 	margin-left: 0;
 	margin-right: 0;
 }
-* html #column-content #content {
+* html div#column-content div#content {
 	margin-left: 0;
 	margin-top: 3em;
 }
-* html #column-one { right: 0; }
+* html div#column-one { right: 0; }
 
 /* js pref toc */
 
@@ -207,6 +211,41 @@ input#wpSave, input#wpDiff {
 }
 
 #userlogin {
-	float: right;
 	margin: 0 0 1em 3em;
+}
+/* Convenience links to edit block, delete and protect reasons */
+p.mw-ipb-conveniencelinks, p.mw-protect-editreasons,
+p.mw-filedelete-editreasons, p.mw-delete-editreasons {
+	float: left;
+}
+
+.toggle {
+	margin-left: 0em;
+	margin-right: 2em;
+}
+table.filehistory th {
+	text-align: right;
+}
+
+/* Special:AllPages styling */
+td.mw-allpages-nav, p.mw-allpages-nav, td.mw-allpages-alphaindexline {
+	text-align: left;
+}
+
+/* Special:PrefixIndex styling */
+td#mw-prefixindex-nav-form {
+	text-align: left;
+}
+
+/**
+ * Lists:
+ * The following lines don't have a visible effect on non-Gecko browsers
+ * They fix a problem ith Gecko browsers rendering lists to the right of
+ * left-floated objects in an RTL layout.
+ */
+html > body div#article ul {
+	display: table;
+}
+html > body div#bodyContent ul#filetoc {
+	display: block;
 }

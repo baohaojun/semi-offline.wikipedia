@@ -1,5 +1,5 @@
 /* opera 6 fixes */
-#column-one {
+div#column-one {
 	position: relative;
 	max-width: 11.7em;
 }
@@ -11,4 +11,10 @@
 #bodyContent a.external {
 	background: url(external.png) center right no-repeat;
 	padding-right: 13px;
+}
+
+.rtl a.feedlink {
+	background-position: right;
+	padding-right: 0;
+	padding-left: 16px;
 }

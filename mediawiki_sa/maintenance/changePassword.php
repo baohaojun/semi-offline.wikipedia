@@ -2,52 +2,52 @@
 /**
  * Change the password of a given user
  *
- * @package MediaWiki
- * @subpackage Maintenance
+ * Copyright © 2005, Ævar Arnfjörð Bjarmason
  *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * http://www.gnu.org/copyleft/gpl.html
+ *
+ * @file
  * @author Ævar Arnfjörð Bjarmason <avarab@gmail.com>
- * @copyright Copyright © 2005, Ævar Arnfjörð Bjarmason
- * @license http://www.gnu.org/copyleft/gpl.html GNU General Public License 2.0 or later
+ * @ingroup Maintenance
  */
 
-class ChangePassword {
-	var $dbw;
-	var $user, $password;
+require_once( dirname( __FILE__ ) . '/Maintenance.php' );
 
-	function ChangePassword( $user, $password ) {
-		$this->user = User::newFromName( $user );
-		$this->password = $password;
-
-		$this->dbw =& wfGetDB( DB_MASTER );
+class ChangePassword extends Maintenance {
+	public function __construct() {
+		parent::__construct();
+		$this->addOption( "user", "The username to operate on", true, true );
+		$this->addOption( "password", "The password to use", true, true );
+		$this->mDescription = "Change a user's password";
 	}
-
-	function main() {
-		$fname = 'ChangePassword::main';
-
-		$this->dbw->update( 'user',
-			array(
-				'user_password' => wfEncryptPassword( $this->user->getID(), $this->password )
-			),
-			array(
-				'user_id' => $this->user->getID()
-			),
-			$fname
-		);
+	
+	public function execute() {
+		$user = User::newFromName( $this->getOption( 'user' ) );
+		if ( !$user->getId() ) {
+			$this->error( "No such user: " . $this->getOption( 'user' ), true );
+		}
+		try {
+			$user->setPassword( $this->getOption( 'password' ) );
+			$user->saveSettings();
+			$this->output( "Password set for " . $user->getName() . "\n" );
+		} catch ( PasswordError $pwe ) {
+			$this->error( $pwe->getText(), true );
+		}
 	}
 }
 
-$optionsWithArgs = array( 'user', 'password' );
-require_once 'commandLine.inc';
-
-if( in_array( '--help', $argv ) )
-	wfDie(
-		"Usage: php changePassword.php [--user=user --password=password | --help]\n" .
-		"\toptions:\n" .
-		"\t\t--help\tshow this message\n" .
-		"\t\t--user\tthe username to operate on\n" .
-		"\t\t--password\tthe password to use\n"
-	);
-
-$cp = new ChangePassword( @$options['user'], @$options['password'] );
-$cp->main();
-?>
+$maintClass = "ChangePassword";
+require_once( DO_MAINTENANCE );

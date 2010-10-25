@@ -5,18 +5,18 @@
 DROP TABLE IF EXISTS /*$wgDBprefix*/links;
 CREATE TABLE /*$wgDBprefix*/links (
   -- Key to the page_id of the page containing the link.
-  l_from int(8) unsigned NOT NULL default '0',
+  l_from int unsigned NOT NULL default '0',
   
   -- Key to the page_id of the link target.
   -- An unfortunate consequence of this is that rename
   -- operations require changing the links entries for
   -- all links to the moved page.
-  l_to int(8) unsigned NOT NULL default '0',
+  l_to int unsigned NOT NULL default '0',
   
   UNIQUE KEY l_from(l_from,l_to),
   KEY (l_to)
 
-) TYPE=InnoDB;
+) /*$wgDBTableOptions*/;
 
 --
 -- Track links to pages that don't yet exist.
@@ -26,7 +26,7 @@ CREATE TABLE /*$wgDBprefix*/links (
 DROP TABLE IF EXISTS /*$wgDBprefix*/brokenlinks;
 CREATE TABLE /*$wgDBprefix*/brokenlinks (
   -- Key to the page_id of the page containing the link.
-  bl_from int(8) unsigned NOT NULL default '0',
+  bl_from int unsigned NOT NULL default '0',
   
   -- Text of the target page title ("namesapce:title").
   -- Unfortunately this doesn't split the namespace index
@@ -35,7 +35,7 @@ CREATE TABLE /*$wgDBprefix*/brokenlinks (
   UNIQUE KEY bl_from(bl_from,bl_to),
   KEY (bl_to)
 
-) TYPE=InnoDB;
+) /*$wgDBTableOptions*/;
 
 --
 -- Track links to images *used inline*
@@ -45,17 +45,17 @@ CREATE TABLE /*$wgDBprefix*/brokenlinks (
 DROP TABLE IF EXISTS /*$wgDBprefix*/imagelinks;
 CREATE TABLE /*$wgDBprefix*/imagelinks (
   -- Key to page_id of the page containing the image / media link.
-  il_from int(8) unsigned NOT NULL default '0',
+  il_from int unsigned NOT NULL default '0',
   
   -- Filename of target image.
   -- This is also the page_title of the file's description page;
-  -- all such pages are in namespace 6 (NS_IMAGE).
+  -- all such pages are in namespace 6 (NS_FILE).
   il_to varchar(255) binary NOT NULL default '',
   
   UNIQUE KEY il_from(il_from,il_to),
   KEY (il_to)
 
-) TYPE=InnoDB;
+) /*$wgDBTableOptions*/;
 
 --
 -- Stores (possibly gzipped) serialized objects with
@@ -67,4 +67,4 @@ CREATE TABLE /*$wgDBprefix*/linkscc (
   lcc_pageid INT UNSIGNED NOT NULL UNIQUE KEY,
   lcc_cacheobj MEDIUMBLOB NOT NULL
 
-) TYPE=InnoDB;
+) /*$wgDBTableOptions*/;

@@ -5,11 +5,11 @@ CREATE TABLE /*$wgDBprefix*/logging (
   -- Symbolic keys for the general log type and the action type
   -- within the log. The output format will be controlled by the
   -- action field, but only the type controls categorization.
-  log_type char(10) NOT NULL default '',
-  log_action char(10) NOT NULL default '',
+  log_type varbinary(10) NOT NULL default '',
+  log_action varbinary(10) NOT NULL default '',
   
   -- Timestamp. Duh.
-  log_timestamp char(14) NOT NULL default '19700101000000',
+  log_timestamp binary(14) NOT NULL default '19700101000000',
   
   -- The user who performed this action; key to user_id
   log_user int unsigned NOT NULL default 0,
@@ -23,13 +23,13 @@ CREATE TABLE /*$wgDBprefix*/logging (
   log_comment varchar(255) NOT NULL default '',
   
   -- LF separated list of miscellaneous parameters
-  log_params blob NOT NULL default '',
+  log_params blob NOT NULL,
 
   KEY type_time (log_type, log_timestamp),
   KEY user_time (log_user, log_timestamp),
   KEY page_time (log_namespace, log_title, log_timestamp)
 
-) TYPE=InnoDB;
+) /*$wgDBTableOptions*/;
 
 
 -- Change from unsigned to signed so we can store special pages

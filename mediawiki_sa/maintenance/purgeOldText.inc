@@ -3,15 +3,15 @@
 /**
  * Support functions for cleaning up redundant text records
  *
- * @package MediaWiki
- * @subpackage Maintenance
+ * @file
+ * @ingroup Maintenance
  * @author Rob Church <robchur@gmail.com>
  */
 
 function PurgeRedundantText( $delete = false ) {
 	
 	# Data should come off the master, wrapped in a transaction
-	$dbw =& wfGetDB( DB_MASTER );
+	$dbw = wfGetDB( DB_MASTER );
 	$dbw->begin();
 	
 	$tbl_arc = $dbw->tableName( 'archive' );
@@ -20,16 +20,16 @@ function PurgeRedundantText( $delete = false ) {
 	
 	# Get "active" text records from the revisions table
 	echo( "Searching for active text records in revisions table..." );
-	$res = $dbw->query( "SELECT DISTINCTROW rev_text_id FROM $tbl_rev" );
-	while( $row = $dbw->fetchObject( $res ) ) {
+	$res = $dbw->query( "SELECT DISTINCT rev_text_id FROM $tbl_rev" );
+	foreach ( $res as $row ) {
 		$cur[] = $row->rev_text_id;
 	}
 	echo( "done.\n" );
 	
 	# Get "active" text records from the archive table
 	echo( "Searching for active text records in archive table..." );
-	$res = $dbw->query( "SELECT DISTINCTROW ar_text_id FROM $tbl_arc" );
-	while( $row = $dbw->fetchObject( $res ) ) {
+	$res = $dbw->query( "SELECT DISTINCT ar_text_id FROM $tbl_arc" );
+	foreach ( $res as $row ) {
 		$cur[] = $row->ar_text_id;
 	}
 	echo( "done.\n" );
@@ -38,7 +38,8 @@ function PurgeRedundantText( $delete = false ) {
 	echo( "Searching for inactive text records..." );
 	$set = implode( ', ', $cur );
 	$res = $dbw->query( "SELECT old_id FROM $tbl_txt WHERE old_id NOT IN ( $set )" );
-	while( $row = $dbw->fetchObject( $res ) ) {
+	$old = array();
+	foreach ( $res as $row ) {
 		$old[] = $row->old_id;
 	}
 	echo( "done.\n" );
@@ -48,7 +49,7 @@ function PurgeRedundantText( $delete = false ) {
 	echo( "$count inactive items found.\n" );
 	
 	# Delete as appropriate
-	if( $delete && $count ) {
+	if ( $delete && $count ) {
 		echo( "Deleting..." );
 		$set = implode( ', ', $old );
 		$dbw->query( "DELETE FROM $tbl_txt WHERE old_id IN ( $set )" );
@@ -59,5 +60,3 @@ function PurgeRedundantText( $delete = false ) {
 	$dbw->commit();
 	
 }
-
-?>

@@ -1,7 +1,8 @@
 <?php
 /**
  * Command line script to check for an open proxy at a specified location
- * @package MediaWiki
+ *
+ * @file
  */
 
 if( php_sapi_name() != 'cli' ) {
@@ -51,5 +52,3 @@ if ( ( isset( $_REQUEST ) && array_key_exists( 'argv', $_REQUEST ) ) || count( $
 $output = escapeshellarg( $output );
 
 #`echo $output >> /home/tstarling/open/proxy.log`;
-
-?>

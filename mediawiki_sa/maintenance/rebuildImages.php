@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  * Script to update image metadata records
  *
  * Usage: php rebuildImages.php [--missing] [--dry-run]
@@ -7,7 +7,7 @@
  *   --missing  Crawl the uploads dir for images without records, and
  *              add them only.
  *
- * Copyright (C) 2005 Brion Vibber <brion@pobox.com>
+ * Copyright © 2005 Brion Vibber <brion@pobox.com>
  * http://www.mediawiki.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,22 +25,43 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  * http://www.gnu.org/copyleft/gpl.html
  *
+ * @file
  * @author Brion Vibber <brion at pobox.com>
- * @package MediaWiki
- * @subpackage maintenance
+ * @ingroup maintenance
  */
 
-$options = array( 'missing', 'dry-run' );
+require_once( dirname( __FILE__ ) . '/Maintenance.php' );
 
-require_once( 'commandLine.inc' );
-require_once( 'FiveUpgrade.inc' );
+class ImageBuilder extends Maintenance {
+	function __construct() {
+		parent::__construct();
 
-class ImageBuilder extends FiveUpgrade {
-	function ImageBuilder( $dryrun = false ) {
-		parent::FiveUpgrade();
+		$this->mDescription = 'Script to update image metadata records';
 
+		$this->addOption( 'missing', 'Check for files without associated database record' );
+		$this->addOption( 'dry-run', 'Only report, don\'t update the database' );
+	}
+
+	public function execute() {
+		$this->dbw = wfGetDB( DB_MASTER );
 		$this->maxLag = 10; # if slaves are lagged more than 10 secs, wait
-		$this->dryrun = $dryrun;
+		$this->dryrun = $this->hasOption( 'dry-run' );
+		if ( $this->dryrun ) {
+			$GLOBALS['wgReadOnly'] = 'Dry run mode, image upgrades are suppressed';
+		}
+
+		if ( $this->hasOption( 'missing' ) ) {
+			$this->crawlMissing();
+		} else {
+			$this->build();
+		}
+	}
+
+	function getRepo() {
+		if ( !isset( $this->repo ) ) {
+			$this->repo = RepoGroup::singleton()->getLocalRepo();
+		}
+		return $this->repo;
 	}
 
 	function build() {
@@ -59,7 +80,7 @@ class ImageBuilder extends FiveUpgrade {
 	function progress( $updated ) {
 		$this->updated += $updated;
 		$this->processed++;
-		if( $this->processed % 100 != 0 ) {
+		if ( $this->processed % 100 != 0 ) {
 			return;
 		}
 		$portion = $this->processed / $this->count;
@@ -69,151 +90,86 @@ class ImageBuilder extends FiveUpgrade {
 		$delta = $now - $this->startTime;
 		$estimatedTotalTime = $delta / $portion;
 		$eta = $this->startTime + $estimatedTotalTime;
+		$rate = $this->processed / $delta;
 
-		printf( "%s: %6.2f%% done on %s; ETA %s [%d/%d] %.2f/sec <%.2f%% updated>\n",
+		$this->output( sprintf( "%s: %6.2f%% done on %s; ETA %s [%d/%d] %.2f/sec <%.2f%% updated>\n",
 			wfTimestamp( TS_DB, intval( $now ) ),
 			$portion * 100.0,
 			$this->table,
 			wfTimestamp( TS_DB, intval( $eta ) ),
-			$completed,
+			$this->processed,
 			$this->count,
 			$rate,
-			$updateRate * 100.0 );
+			$updateRate * 100.0 ) );
 		flush();
 	}
 
 	function buildTable( $table, $key, $callback ) {
-		$fname = 'ImageBuilder::buildTable';
-
-		$count = $this->dbw->selectField( $table, 'count(*)', '', $fname );
+		$count = $this->dbw->selectField( $table, 'count(*)', '', __METHOD__ );
 		$this->init( $count, $table );
-		$this->log( "Processing $table..." );
+		$this->output( "Processing $table...\n" );
 
-		$tableName = $this->dbr->tableName( $table );
-		$sql = "SELECT * FROM $tableName";
-		$result = $this->dbr->query( $sql, $fname );
+		$result = wfGetDB( DB_SLAVE )->select( $table, '*', array(), __METHOD__ );
 
-		while( $row = $this->dbr->fetchObject( $result ) ) {
-			$update = call_user_func( $callback, $row );
-			if( is_array( $update ) ) {
-				if( !$this->dryrun ) {
-					$this->dbw->update( $table,
-						$update,
-						array( $key => $row->$key ),
-						$fname );
-				}
+		foreach ( $result as $row ) {
+			$update = call_user_func( $callback, $row, null );
+			if ( $update ) {
 				$this->progress( 1 );
 			} else {
 				$this->progress( 0 );
 			}
 		}
-		$this->log( "Finished $table... $this->updated of $this->processed rows updated" );
-		$this->dbr->freeResult( $result );
+		$this->output( "Finished $table... $this->updated of $this->processed rows updated\n" );
 	}
 
 	function buildImage() {
-		$callback = array( &$this, 'imageCallback' );
+		$callback = array( $this, 'imageCallback' );
 		$this->buildTable( 'image', 'img_name', $callback );
 	}
 
-	function imageCallback( $row ) {
-		if( $row->img_width ) {
-			// Already processed
-			return null;
-		}
-
-		// Fill in the new image info fields
-		$info = $this->imageInfo( $row->img_name );
-
-		global $wgMemc, $wgDBname;
-		$key = $wgDBname . ":Image:" . md5( $row->img_name );
-		$wgMemc->delete( $key );
-
-		return array(
-			'img_width'      => $info['width'],
-			'img_height'     => $info['height'],
-			'img_bits'       => $info['bits'],
-			'img_media_type' => $info['media'],
-			'img_major_mime' => $info['major'],
-			'img_minor_mime' => $info['minor'] );
+	function imageCallback( $row, $copy ) {
+		// Create a File object from the row
+		// This will also upgrade it
+		$file = $this->getRepo()->newFileFromRow( $row );
+		return $file->getUpgraded();
 	}
-
 
 	function buildOldImage() {
 		$this->buildTable( 'oldimage', 'oi_archive_name',
-			array( &$this, 'oldimageCallback' ) );
+			array( $this, 'oldimageCallback' ) );
 	}
 
-	function oldimageCallback( $row ) {
-		if( $row->oi_width ) {
-			return null;
+	function oldimageCallback( $row, $copy ) {
+		// Create a File object from the row
+		// This will also upgrade it
+		if ( $row->oi_archive_name == '' ) {
+			$this->output( "Empty oi_archive_name for oi_name={$row->oi_name}\n" );
+			return false;
 		}
-
-		// Fill in the new image info fields
-		$info = $this->imageInfo( $row->oi_archive_name, 'wfImageArchiveDir', $row->oi_name );
-		return array(
-			'oi_width'  => $info['width' ],
-			'oi_height' => $info['height'],
-			'oi_bits'   => $info['bits'  ] );
+		$file = $this->getRepo()->newFileFromRow( $row );
+		return $file->getUpgraded();
 	}
 
 	function crawlMissing() {
-		global $wgUploadDirectory, $wgHashedUploadDirectory;
-		if( $wgHashedUploadDirectory ) {
-			for( $i = 0; $i < 16; $i++ ) {
-				for( $j = 0; $j < 16; $j++ ) {
-					$dir = sprintf( '%s%s%01x%s%02x',
-						$wgUploadDirectory,
-						DIRECTORY_SEPARATOR,
-						$i,
-						DIRECTORY_SEPARATOR,
-						$i * 16 + $j );
-					$this->crawlDirectory( $dir );
-				}
-			}
-		} else {
-			$this->crawlDirectory( $wgUploadDirectory );
-		}
+		$repo = RepoGroup::singleton()->getLocalRepo();
+		$repo->enumFilesInFS( array( $this, 'checkMissingImage' ) );
 	}
 
-	function crawlDirectory( $dir ) {
-		if( !file_exists( $dir ) ) {
-			return $this->log( "no directory, skipping $dir" );
+	function checkMissingImage( $fullpath ) {
+		$filename = wfBaseName( $fullpath );
+		if ( is_dir( $fullpath ) ) {
+			return;
 		}
-		if( !is_dir( $dir ) ) {
-			return $this->log( "not a directory?! skipping $dir" );
+		if ( is_link( $fullpath ) ) {
+			$this->output( "skipping symlink at $fullpath\n" );
+			return;
 		}
-		if( !is_readable( $dir ) ) {
-			return $this->log( "dir not readable, skipping $dir" );
-		}
-		$source = opendir( $dir );
-		if( $source === false ) {
-			return $this->log( "couldn't open dir, skipping $dir" );
-		}
-
-		$this->log( "crawling $dir" );
-		while( false !== ( $filename = readdir( $source ) ) ) {
-			$fullpath = $dir . DIRECTORY_SEPARATOR . $filename;
-			if( is_dir( $fullpath ) ) {
-				continue;
-			}
-			if( is_link( $fullpath ) ) {
-				$this->log( "skipping symlink at $fullpath" );
-				continue;
-			}
-			$this->checkMissingImage( $filename, $fullpath );
-		}
-		closedir( $source );
-	}
-
-	function checkMissingImage( $filename, $fullpath ) {
-		$fname = 'ImageBuilder::checkMissingImage';
 		$row = $this->dbw->selectRow( 'image',
 			array( 'img_name' ),
 			array( 'img_name' => $filename ),
-			$fname );
+			__METHOD__ );
 
-		if( $row ) {
+		if ( $row ) {
 			// already known, move on
 			return;
 		} else {
@@ -222,54 +178,35 @@ class ImageBuilder extends FiveUpgrade {
 	}
 
 	function addMissingImage( $filename, $fullpath ) {
-		$fname = 'ImageBuilder::addMissingImage';
-
-		$size = filesize( $fullpath );
-		$info = $this->imageInfo( $filename );
 		$timestamp = $this->dbw->timestamp( filemtime( $fullpath ) );
 
 		global $wgContLang;
 		$altname = $wgContLang->checkTitleEncoding( $filename );
-		if( $altname != $filename ) {
-			if( $this->dryrun ) {
+		if ( $altname != $filename ) {
+			if ( $this->dryrun ) {
 				$filename = $altname;
-				$this->log( "Estimating transcoding... $altname" );
+				$this->output( "Estimating transcoding... $altname\n" );
 			} else {
 				$filename = $this->renameFile( $filename );
 			}
 		}
 
-		if( $filename == '' ) {
-			$this->log( "Empty filename for $fullpath" );
+		if ( $filename == '' ) {
+			$this->output( "Empty filename for $fullpath\n" );
 			return;
 		}
-
-		$fields = array(
-			'img_name'       => $filename,
-			'img_size'       => $size,
-			'img_width'      => $info['width'],
-			'img_height'     => $info['height'],
-			'img_metadata'   => '', // filled in on-demand
-			'img_bits'       => $info['bits'],
-			'img_media_type' => $info['media'],
-			'img_major_mime' => $info['major'],
-			'img_minor_mime' => $info['minor'],
-			'img_description' => '(recovered file, missing upload log entry)',
-			'img_user'        => 0,
-			'img_user_text'   => 'Conversion script',
-			'img_timestamp'   => $timestamp );
-		if( !$this->dryrun ) {
-			$this->dbw->insert( 'image', $fields, $fname );
+		if ( !$this->dryrun ) {
+			$file = wfLocalFile( $filename );
+			if ( !$file->recordUpload( '', '(recovered file, missing upload log entry)', '', '', '',
+				false, $timestamp ) )
+			{
+				$this->output( "Error uploading file $fullpath\n" );
+				return;
+			}
 		}
-		$this->log( $fullpath );
+		$this->output( $fullpath . "\n" );
 	}
 }
 
-$builder = new ImageBuilder( isset( $options['dry-run'] ) );
-if( isset( $options['missing'] ) ) {
-	$builder->crawlMissing();
-} else {
-	$builder->build();
-}
-
-?>
+$maintClass = 'ImageBuilder';
+require( DO_MAINTENANCE );

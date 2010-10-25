@@ -18,23 +18,27 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  * http://www.gnu.org/copyleft/gpl.html
  *
- * @package MediaWiki
- * @subpackage Maintenance
+ * @file
+ * @ingroup Maintenance
  */
 
 $optionsWithArgs = array( 'report' );
 
-require_once( 'commandLine.inc' );
-require_once( 'SpecialImport.php' );
+require_once( dirname( __FILE__ ) . '/commandLine.inc' );
 
+/**
+ * @ingroup Maintenance
+ */
 class BackupReader {
 	var $reportingInterval = 100;
 	var $reporting = true;
 	var $pageCount = 0;
 	var $revCount  = 0;
 	var $dryRun    = false;
+	var $debug     = false;
+	var $uploads   = false;
 
-	function BackupReader() {
+	function __construct() {
 		$this->stderr = fopen( "php://stderr", "wt" );
 	}
 
@@ -44,40 +48,66 @@ class BackupReader {
 
 	function handleRevision( $rev ) {
 		$title = $rev->getTitle();
-		if (!$title) {
+		if ( !$title ) {
 			$this->progress( "Got bogus revision with null title!" );
 			return;
 		}
-		$display = $title->getPrefixedText();
-		$timestamp = $rev->getTimestamp();
-		#echo "$display $timestamp\n";
 
 		$this->revCount++;
 		$this->report();
 
-		if( !$this->dryRun ) {
+		if ( !$this->dryRun ) {
 			call_user_func( $this->importCallback, $rev );
+		}
+	}
+	
+	function handleUpload( $revision ) {
+		if ( $this->uploads ) {
+			$this->uploadCount++;
+			// $this->report();
+			$this->progress( "upload: " . $revision->getFilename() );
+			
+			if ( !$this->dryRun ) {
+				// bluuuh hack
+				// call_user_func( $this->uploadCallback, $revision );
+				$dbw = wfGetDB( DB_MASTER );
+				return $dbw->deadlockLoop( array( $revision, 'importUpload' ) );
+			}
+		}
+	}
+
+	function handleLogItem( $rev ) {
+		$this->revCount++;
+		$this->report();
+
+		if ( !$this->dryRun ) {
+			call_user_func( $this->logItemCallback, $rev );
 		}
 	}
 
 	function report( $final = false ) {
-		if( $final xor ( $this->pageCount % $this->reportingInterval == 0 ) ) {
+		if ( $final xor ( $this->pageCount % $this->reportingInterval == 0 ) ) {
 			$this->showReport();
 		}
 	}
 
 	function showReport() {
-		if( $this->reporting ) {
+		if ( $this->reporting ) {
 			$delta = wfTime() - $this->startTime;
-			if( $delta ) {
-				$rate = $this->pageCount / $delta;
-				$revrate = $this->revCount / $delta;
+			if ( $delta ) {
+				$rate = sprintf( "%.2f", $this->pageCount / $delta );
+				$revrate = sprintf( "%.2f", $this->revCount / $delta );
 			} else {
 				$rate = '-';
 				$revrate = '-';
 			}
-			$this->progress( "$this->pageCount ($rate pages/sec $revrate revs/sec)" );
+			# Logs dumps don't have page tallies
+			if ( $this->pageCount )
+				$this->progress( "$this->pageCount ($rate pages/sec $revrate revs/sec)" );
+			else
+				$this->progress( "$this->revCount ($revrate revs/sec)" );
 		}
+		wfWaitForSlaves( 5 );
 	}
 
 	function progress( $string ) {
@@ -85,9 +115,16 @@ class BackupReader {
 	}
 
 	function importFromFile( $filename ) {
-		if( preg_match( '/\.gz$/', $filename ) ) {
+		if ( preg_match( '/\.gz$/', $filename ) ) {
 			$filename = 'compress.zlib://' . $filename;
 		}
+		elseif ( preg_match( '/\.bz2$/', $filename ) ) {
+			$filename = 'compress.bzip2://' . $filename;
+		}
+		elseif ( preg_match( '/\.7z$/', $filename ) ) {
+			$filename = 'mediawiki.compress.7z://' . $filename;
+		}
+
 		$file = fopen( $filename, 'rt' );
 		return $this->importFromHandle( $file );
 	}
@@ -103,39 +140,56 @@ class BackupReader {
 		$source = new ImportStreamSource( $handle );
 		$importer = new WikiImporter( $source );
 
+		$importer->setDebug( $this->debug );
 		$importer->setPageCallback( array( &$this, 'reportPage' ) );
 		$this->importCallback =  $importer->setRevisionCallback(
 			array( &$this, 'handleRevision' ) );
+		$this->uploadCallback = $importer->setUploadCallback(
+			array( &$this, 'handleUpload' ) );
+		$this->logItemCallback = $importer->setLogItemCallback(
+			array( &$this, 'handleLogItem' ) );
+			
+		if ( $this->dryRun ) {
+			$importer->setPageOutCallback( null );
+		}
 
 		return $importer->doImport();
 	}
 }
 
-if( wfReadOnly() ) {
+if ( wfReadOnly() ) {
 	wfDie( "Wiki is in read-only mode; you'll need to disable it for import to work.\n" );
 }
 
 $reader = new BackupReader();
-if( isset( $options['quiet'] ) ) {
+if ( isset( $options['quiet'] ) ) {
 	$reader->reporting = false;
 }
-if( isset( $options['report'] ) ) {
+if ( isset( $options['report'] ) ) {
 	$reader->reportingInterval = intval( $options['report'] );
 }
-if( isset( $options['dry-run'] ) ) {
+if ( isset( $options['dry-run'] ) ) {
 	$reader->dryRun = true;
 }
+if ( isset( $options['debug'] ) ) {
+	$reader->debug = true;
+}
+if ( isset( $options['uploads'] ) ) {
+	$reader->uploads = true; // experimental!
+}
 
-if( isset( $args[0] ) ) {
+if ( isset( $args[0] ) ) {
 	$result = $reader->importFromFile( $args[0] );
 } else {
 	$result = $reader->importFromStdin();
 }
 
-if( WikiError::isError( $result ) ) {
+if ( WikiError::isError( $result ) ) {
 	echo $result->getMessage() . "\n";
 } else {
 	echo "Done!\n";
+	echo "You might want to run rebuildrecentchanges.php to regenerate\n";
+	echo "the recentchanges page.\n";
 }
 
-?>
+

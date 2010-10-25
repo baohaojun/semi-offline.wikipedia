@@ -15,7 +15,8 @@ sub LooseEntities {
 my %templates;
 open RES, "/var/tmp/result.html" || die "No page currently rendered\n";
 while(<RES>) {
-    if (/"\/(article\/Template:[^"]*)".*title="Template:([^"]*)"/) {
+    if (/"\/(article\/Template:[^"]*?)(?:\/&amp;redlink=1)?".*title="Template:([^"]*?)(?: .page does not exist.)?"/) {
+        print "template{$2} is $1\n";
 	$templates{$2}=$1;
     }
 }

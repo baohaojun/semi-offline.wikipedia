@@ -1,11 +1,6 @@
 <?php
 /**
- * @package MediaWiki
- * @subpackage Metadata
- *
- * @author Ævar Arnfjörð Bjarmason <avarab@gmail.com>
- * @copyright Copyright © 2005, Ævar Arnfjörð Bjarmason
- * @license http://www.gnu.org/copyleft/gpl.html GNU General Public License
+ * Exif metadata reader
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,36 +17,38 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  * http://www.gnu.org/copyleft/gpl.html
  *
- * @link http://exif.org/Exif2-2.PDF The Exif 2.2 specification
- * @bug 1555, 1947
+ * @ingroup Media
+ * @author Ævar Arnfjörð Bjarmason <avarab@gmail.com>
+ * @copyright Copyright © 2005, Ævar Arnfjörð Bjarmason
+ * @license http://www.gnu.org/copyleft/gpl.html GNU General Public License
+ * @see http://exif.org/Exif2-2.PDF The Exif 2.2 specification
+ * @file
  */
 
 /**
- * @package MediaWiki
- * @subpackage Metadata
+ * @todo document (e.g. one-sentence class-overview description)
+ * @ingroup Media
  */
 class Exif {
+
+	const BYTE      = 1;    //!< An 8-bit (1-byte) unsigned integer.
+	const ASCII     = 2;    //!< An 8-bit byte containing one 7-bit ASCII code. The final byte is terminated with NULL.
+	const SHORT     = 3;    //!< A 16-bit (2-byte) unsigned integer.
+	const LONG      = 4;    //!< A 32-bit (4-byte) unsigned integer.
+	const RATIONAL  = 5;    //!< Two LONGs. The first LONG is the numerator and the second LONG expresses the denominator
+	const UNDEFINED = 7;    //!< An 8-bit byte that can take any value depending on the field definition
+	const SLONG     = 9;    //!< A 32-bit (4-byte) signed integer (2's complement notation),
+	const SRATIONAL = 10;   //!< Two SLONGs. The first SLONG is the numerator and the second SLONG is the denominator.
+
 	//@{
 	/* @var array
 	 * @private
 	 */
 
-	/**#@+
-	 * Exif tag type definition
-	 */
-	const BYTE      = 1;    # An 8-bit (1-byte) unsigned integer.
-	const ASCII     = 2;    # An 8-bit byte containing one 7-bit ASCII code. The final byte is terminated with NULL.
-	const SHORT     = 3;    # A 16-bit (2-byte) unsigned integer.
-	const LONG      = 4;    # A 32-bit (4-byte) unsigned integer.
-	const RATIONAL  = 5;    # Two LONGs. The first LONG is the numerator and the second LONG expresses the denominator
-	const UNDEFINED = 7;    # An 8-bit byte that can take any value depending on the field definition
-	const SLONG     = 9;    # A 32-bit (4-byte) signed integer (2's complement notation),
-	const SRATIONAL = 10;   # Two SLONGs. The first SLONG is the numerator and the second SLONG is the denominator.
-
 	/**
 	 * Exif tags grouped by category, the tagname itself is the key and the type
 	 * is the value, in the case of more than one possible value type they are
-	 * seperated by commas.
+	 * separated by commas.
 	 */
 	var $mExifTags;
 
@@ -95,9 +92,9 @@ class Exif {
 	var $basename;
 
 	/**
-	 * The private log to log to
+	 * The private log to log to, e.g. 'exif'
 	 */
-	var $log = 'exif';
+	var $log = false;
 
 	//@}
 
@@ -106,7 +103,7 @@ class Exif {
 	 *
 	 * @param $file String: filename.
 	 */
-	function Exif( $file ) {
+	function __construct( $file ) {
 		/**
 		 * Page numbers here refer to pages in the EXIF 2.2 standard
 		 *
@@ -293,7 +290,7 @@ class Exif {
 		);
 
 		$this->file = $file;
-		$this->basename = basename( $this->file );
+		$this->basename = wfBaseName( $this->file );
 
 		$this->makeFlatExifTags();
 
@@ -407,7 +404,7 @@ class Exif {
 	 *
 	 * @return int
 	 */
-	function version() {
+	public static function version() {
 		return 1; // We don't need no bloddy constants!
 	}
 
@@ -433,13 +430,13 @@ class Exif {
 		if ( is_array( $in ) ) {
 			return false;
 		}
-		
+
 		if ( preg_match( "/[^\x0a\x20-\x7e]/", $in ) ) {
 			$this->debug( $in, __FUNCTION__, 'found a character not in our whitelist' );
 			return false;
 		}
 
-		if ( preg_match( "/^\s*$/", $in ) ) {
+		if ( preg_match( '/^\s*$/', $in ) ) {
 			$this->debug( $in, __FUNCTION__, 'input consisted solely of whitespace' );
 			return false;
 		}
@@ -468,7 +465,8 @@ class Exif {
 	}
 
 	function isRational( $in ) {
-		if ( !is_array( $in ) && @preg_match( "/^(\d+)\/(\d+[1-9]|[1-9]\d*)$/", $in, $m ) ) { # Avoid division by zero
+		$m = array();
+		if ( !is_array( $in ) && @preg_match( '/^(\d+)\/(\d+[1-9]|[1-9]\d*)$/', $in, $m ) ) { # Avoid division by zero
 			return $this->isLong( $m[1] ) && $this->isLong( $m[2] );
 		} else {
 			$this->debug( $in, __FUNCTION__, 'fed a non-fraction value' );
@@ -477,7 +475,7 @@ class Exif {
 	}
 
 	function isUndefined( $in ) {
-		if ( !is_array( $in ) && preg_match( "/^\d{4}$/", $in ) ) { // Allow ExifVersion and FlashpixVersion
+		if ( !is_array( $in ) && preg_match( '/^\d{4}$/', $in ) ) { // Allow ExifVersion and FlashpixVersion
 			$this->debug( $in, __FUNCTION__, true );
 			return true;
 		} else {
@@ -497,7 +495,8 @@ class Exif {
 	}
 
 	function isSrational( $in ) {
-		if ( !is_array( $in ) && preg_match( "/^(\d+)\/(\d+[1-9]|[1-9]\d*)$/", $in, $m ) ) { # Avoid division by zero
+		$m = array();
+		if ( !is_array( $in ) && preg_match( '/^(\d+)\/(\d+[1-9]|[1-9]\d*)$/', $in, $m ) ) { # Avoid division by zero
 			return $this->isSlong( $m[0] ) && $this->isSlong( $m[1] );
 		} else {
 			$this->debug( $in, __FUNCTION__, 'fed a non-fraction value' );
@@ -557,11 +556,14 @@ class Exif {
 	 *
 	 * @private
 	 *
-	 * @param $in Mixed: 
-	 * @param $fname String: 
+	 * @param $in Mixed:
+	 * @param $fname String:
 	 * @param $action Mixed: , default NULL.
 	 */
-	 function debug( $in, $fname, $action = NULL ) {
+	function debug( $in, $fname, $action = null ) {
+		if ( !$this->log ) {
+			return;
+		}
 		$type = gettype( $in );
 		$class = ucfirst( __CLASS__ );
 		if ( $type === 'array' )
@@ -586,6 +588,9 @@ class Exif {
 	 * @param $io Boolean: Specify whether we're beginning or ending
 	 */
 	function debugFile( $fname, $io ) {
+		if ( !$this->log ) {
+			return;
+		}
 		$class = ucfirst( __CLASS__ );
 		if ( $io ) {
 			wfDebugLog( $this->log, "$class::$fname: begin processing: '{$this->basename}'\n" );
@@ -597,8 +602,8 @@ class Exif {
 }
 
 /**
- * @package MediaWiki
- * @subpackage Metadata
+ * @todo document (e.g. one-sentence class-overview description)
+ * @ingroup Media
  */
 class FormatExif {
 	/**
@@ -615,7 +620,7 @@ class FormatExif {
 	 * @param $exif Array: the Exif data to format ( as returned by
 	 *                    Exif::getFilteredData() )
 	 */
-	function FormatExif( $exif ) {
+	function __construct( $exif ) {
 		$this->mExif = $exif;
 	}
 
@@ -729,7 +734,9 @@ class FormatExif {
 			case 'DateTime':
 			case 'DateTimeOriginal':
 			case 'DateTimeDigitized':
-				if( preg_match( "/^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)$/", $val ) ) {
+				if( $val == '0000:00:00 00:00:00' ) {
+					$tags[$tag] = wfMsg('exif-unknowndate');
+				} elseif( preg_match( '/^(?:\d{4}):(?:\d\d):(?:\d\d) (?:\d\d):(?:\d\d):(?:\d\d)$/', $val ) ) {
 					$tags[$tag] = $wgLang->timeanddate( wfTimestamp(TS_MW, $val) );
 				}
 				break;
@@ -773,7 +780,28 @@ class FormatExif {
 				}
 				break;
 
-			// TODO: Flash
+			case 'Flash':
+				$flashDecode = array(
+					'fired'    => $val & bindec( '00000001' ),
+					'return'   => ($val & bindec( '00000110' )) >> 1,
+					'mode'     => ($val & bindec( '00011000' )) >> 3,
+					'function' => ($val & bindec( '00100000' )) >> 5,
+					'redeye'   => ($val & bindec( '01000000' )) >> 6,
+//					'reserved' => ($val & bindec( '10000000' )) >> 7,
+				);
+
+				# We do not need to handle unknown values since all are used.
+				foreach( $flashDecode as $subTag => $subValue ) {
+					# We do not need any message for zeroed values.
+					if( $subTag != 'fired' && $subValue == 0) {
+						continue;
+					}
+					$fullTag = $tag . '-' . $subTag ;
+					$flashMsgs[] = $this->msg( $fullTag, $subValue );
+				}
+				$tags[$tag] = $wgLang->commaList( $flashMsgs );
+			break;
+
 			case 'FocalPlaneResolutionUnit':
 				switch( $val ) {
 				case 2:
@@ -1017,6 +1045,14 @@ class FormatExif {
 					$this->formatNum( $val ) );
 				break;
 
+			// Do not transform fields with pure text.
+			// For some languages the formatNum() conversion results to wrong output like
+			// foo,bar@example,com or foo٫bar@example٫com
+			case 'ImageDescription':
+			case 'Artist':
+			case 'Copyright':
+				$tags[$tag] = htmlspecialchars( $val );
+				break;
 			default:
 				$tags[$tag] = $this->formatNum( $val );
 				break;
@@ -1054,10 +1090,13 @@ class FormatExif {
 	 * @return mixed A floating point number or whatever we were fed
 	 */
 	function formatNum( $num ) {
+		global $wgLang;
+
+		$m = array();
 		if ( preg_match( '/^(\d+)\/(\d+)$/', $num, $m ) )
-			return $m[2] != 0 ? $m[1] / $m[2] : $num;
+			return $wgLang->formatNum( $m[2] != 0 ? $m[1] / $m[2] : $num );
 		else
-			return $num;
+			return $wgLang->formatNum( $num );
 	}
 
 	/**
@@ -1069,13 +1108,14 @@ class FormatExif {
 	 * @return mixed A floating point number or whatever we were fed
 	 */
 	function formatFraction( $num ) {
+		$m = array();
 		if ( preg_match( '/^(\d+)\/(\d+)$/', $num, $m ) ) {
 			$numerator = intval( $m[1] );
 			$denominator = intval( $m[2] );
 			$gcd = $this->gcd( $numerator, $denominator );
 			if( $gcd != 0 ) {
 				// 0 shouldn't happen! ;)
-				return $numerator / $gcd . '/' . $denominator / $gcd;
+				return $this->formatNum( $numerator / $gcd ) . '/' . $this->formatNum( $denominator / $gcd );
 			}
 		}
 		return $this->formatNum( $num );
@@ -1108,17 +1148,3 @@ class FormatExif {
 		return $a;
 	}
 }
-
-/**
- * MW 1.6 compatibility
- */
-define( 'MW_EXIF_BYTE', Exif::BYTE );
-define( 'MW_EXIF_ASCII', Exif::ASCII );
-define( 'MW_EXIF_SHORT', Exif::SHORT );
-define( 'MW_EXIF_LONG', Exif::LONG );
-define( 'MW_EXIF_RATIONAL', Exif::RATIONAL );
-define( 'MW_EXIF_UNDEFINED', Exif::UNDEFINED );
-define( 'MW_EXIF_SLONG', Exif::SLONG );
-define( 'MW_EXIF_SRATIONAL', Exif::SRATIONAL );
-
-?>

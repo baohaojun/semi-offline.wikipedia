@@ -1,16 +1,15 @@
 <?php
-
 /**
  * Fsck for MediaWiki
+ *
+ * @file
+ * @ingroup Maintenance ExternalStorage
  */
 
 define( 'CONCAT_HEADER', 'O:27:"concatenatedgziphistoryblob"' );
 
 if ( !defined( 'MEDIAWIKI' ) ) {
-	require_once( dirname(__FILE__) . '/../commandLine.inc' );
-	require_once( 'ExternalStore.php' );
-	require_once( 'ExternalStoreDB.php' );
-	require_once( 'SpecialImport.php' );
+	require_once( dirname( __FILE__ ) . '/../commandLine.inc' );
 
 	$cs = new CheckStorage;
 	$fix = isset( $options['fix'] );
@@ -23,10 +22,12 @@ if ( !defined( 'MEDIAWIKI' ) ) {
 }
 
 
-//----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
 
-class CheckStorage
-{
+/**
+ * @ingroup Maintenance ExternalStorage
+ */
+class CheckStorage {
 	var $oldIdMap, $errors;
 	var $dbStore = null;
 
@@ -36,13 +37,13 @@ class CheckStorage
 		'unfixable' => 'Unexpected errors with no automated fixing method',
 		'fixed' => 'Errors already fixed',
 		'fixable' => 'Errors which would already be fixed if --fix was specified',
-	);		
+	);
 
 	function check( $fix = false, $xml = '' ) {
 		$fname = 'checkStorage';
-		$dbr =& wfGetDB( DB_SLAVE );
+		$dbr = wfGetDB( DB_SLAVE );
 		if ( $fix ) {
-			$dbw =& wfGetDB( DB_MASTER );
+			$dbw = wfGetDB( DB_MASTER );
 			print "Checking, will fix errors if possible...\n";
 		} else {
 			print "Checking...\n";
@@ -62,14 +63,14 @@ class CheckStorage
 
 		for ( $chunkStart = 1 ; $chunkStart < $maxRevId; $chunkStart += $chunkSize ) {
 			$chunkEnd = $chunkStart + $chunkSize - 1;
-			//print "$chunkStart of $maxRevId\n";
+			// print "$chunkStart of $maxRevId\n";
 
 			// Fetch revision rows
 			$this->oldIdMap = array();
-			$dbr->ping();		
-			$res = $dbr->select( 'revision', array( 'rev_id', 'rev_text_id' ), 
+			$dbr->ping();
+			$res = $dbr->select( 'revision', array( 'rev_id', 'rev_text_id' ),
 				array( "rev_id BETWEEN $chunkStart AND $chunkEnd" ), $fname );
-			while ( $row = $dbr->fetchObject( $res ) ) {
+			foreach ( $res as $row ) {
 				$this->oldIdMap[$row->rev_id] = $row->rev_text_id;
 			}
 			$dbr->freeResult( $res );
@@ -82,9 +83,9 @@ class CheckStorage
 			$missingTextRows = array_flip( $this->oldIdMap );
 			$externalRevs = array();
 			$objectRevs = array();
-			$res = $dbr->select( 'text', array( 'old_id', 'old_flags' ), 
+			$res = $dbr->select( 'text', array( 'old_id', 'old_flags' ),
 				'old_id IN (' . implode( ',', $this->oldIdMap ) . ')', $fname );
-			while ( $row = $dbr->fetchObject( $res ) ) {
+			foreach ( $res as $row ) {
 				$flags = $row->old_flags;
 				$id = $row->old_id;
 
@@ -115,7 +116,7 @@ class CheckStorage
 					if ( $fix ) {
 						$this->error( 'fixed', "Warning: old_flags set to 0", $id );
 						$dbw->ping();
-						$dbw->update( 'text', array( 'old_flags' => '' ), 
+						$dbw->update( 'text', array( 'old_flags' => '' ),
 							array( 'old_id' => $id ), $fname );
 						echo "Fixed\n";
 					} else {
@@ -136,9 +137,9 @@ class CheckStorage
 			$externalConcatBlobs = array();
 			$externalNormalBlobs = array();
 			if ( count( $externalRevs ) ) {
-				$res = $dbr->select( 'text', array( 'old_id', 'old_flags', 'old_text' ), 
+				$res = $dbr->select( 'text', array( 'old_id', 'old_flags', 'old_text' ),
 					array( 'old_id IN (' . implode( ',', $externalRevs ) . ')' ), $fname );
-				while ( $row = $dbr->fetchObject( $res ) ) {
+				foreach ( $res as $row ) {
 					$urlParts = explode( '://', $row->old_text, 2 );
 					if ( count( $urlParts ) !== 2 || $urlParts[1] == '' ) {
 						$this->error( 'restore text', "Error: invalid URL \"{$row->old_text}\"", $row->old_id );
@@ -173,10 +174,10 @@ class CheckStorage
 					$blobIds = array_keys( $xBlobIds );
 					$extDb =& $this->dbStore->getSlave( $cluster );
 					$blobsTable = $this->dbStore->getTable( $extDb );
-					$res = $extDb->select( $blobsTable, 
-						array( 'blob_id' ), 
+					$res = $extDb->select( $blobsTable,
+						array( 'blob_id' ),
 						array( 'blob_id IN( ' . implode( ',', $blobIds ) . ')' ), $fname );
-					while ( $row = $extDb->fetchObject( $res ) ) {
+					foreach ( $res as $row ) {
 						unset( $xBlobIds[$row->blob_id] );
 					}
 					$extDb->freeResult( $res );
@@ -193,10 +194,11 @@ class CheckStorage
 			$curIds = array();
 			if ( count( $objectRevs ) ) {
 				$headerLength = 300;
-				$res = $dbr->select( 'text', array( 'old_id', 'old_flags', "LEFT(old_text, $headerLength) AS header" ), 
+				$res = $dbr->select( 'text', array( 'old_id', 'old_flags', "LEFT(old_text, $headerLength) AS header" ),
 					array( 'old_id IN (' . implode( ',', $objectRevs ) . ')' ), $fname );
-				while ( $row = $dbr->fetchObject( $res ) ) {
+				foreach ( $res as $row ) {
 					$oldId = $row->old_id;
+					$matches = array();
 					if ( !preg_match( '/^O:(\d+):"(\w+)"/', $row->header, $matches ) ) {
 						$this->error( 'restore text', "Error: invalid object header", $oldId );
 						continue;
@@ -243,9 +245,9 @@ class CheckStorage
 			$externalConcatBlobs = array();
 			if ( count( $concatBlobs ) ) {
 				$headerLength = 300;
-				$res = $dbr->select( 'text', array( 'old_id', 'old_flags', "LEFT(old_text, $headerLength) AS header" ), 
+				$res = $dbr->select( 'text', array( 'old_id', 'old_flags', "LEFT(old_text, $headerLength) AS header" ),
 					array( 'old_id IN (' . implode( ',', array_keys( $concatBlobs ) ) . ')' ), $fname );
-				while ( $row = $dbr->fetchObject( $res ) ) {
+				foreach ( $res as $row ) {
 					$flags = explode( ',', $row->old_flags );
 					if ( in_array( 'external', $flags ) ) {
 						// Concat blob is in external storage?
@@ -259,7 +261,7 @@ class CheckStorage
 								if ( !isset( $externalConcatBlobs[$cluster][$id] ) ) {
 									$externalConcatBlobs[$cluster][$id] = array();
 								}
-								$externalConcatBlobs[$cluster][$id] = array_merge( 
+								$externalConcatBlobs[$cluster][$id] = array_merge(
 									$externalConcatBlobs[$cluster][$id], $concatBlobs[$row->old_id]
 								);
 							}
@@ -268,7 +270,7 @@ class CheckStorage
 								$concatBlobs[$row->old_id] );
 						}
 					} elseif ( strcasecmp( substr( $row->header, 0, strlen( CONCAT_HEADER ) ), CONCAT_HEADER ) ) {
-						$this->error( 'restore text', "Error: Incorrect object header for concat bulk row {$row->old_id}", 
+						$this->error( 'restore text', "Error: Incorrect object header for concat bulk row {$row->old_id}",
 							$concatBlobs[$row->old_id] );
 					} # else good
 
@@ -284,7 +286,7 @@ class CheckStorage
 		}
 
 		print "\n\nErrors:\n";
-		foreach( $this->errors as $name => $errors ) {
+		foreach ( $this->errors as $name => $errors ) {
 			if ( count( $errors ) ) {
 				$description = $this->errorDescriptions[$name];
 				echo "$description: " . implode( ',', array_keys( $errors ) ) . "\n";
@@ -321,7 +323,7 @@ class CheckStorage
 			foreach ( $ids as $id ) {
 				$revIds = array_merge( $revIds, array_keys( $this->oldIdMap, $id ) );
 			}
-			print "$msg in text rows " . implode( ', ', $ids ) . 
+			print "$msg in text rows " . implode( ', ', $ids ) .
 				", revisions " . implode( ', ', $revIds ) . "\n";
 		} else {
 			$id = $ids;
@@ -350,12 +352,12 @@ class CheckStorage
 			$extDb =& $this->dbStore->getSlave( $cluster );
 			$blobsTable = $this->dbStore->getTable( $extDb );
 			$headerLength = strlen( CONCAT_HEADER );
-			$res = $extDb->select( $blobsTable, 
-				array( 'blob_id', "LEFT(blob_text, $headerLength) AS header" ), 
+			$res = $extDb->select( $blobsTable,
+				array( 'blob_id', "LEFT(blob_text, $headerLength) AS header" ),
 				array( 'blob_id IN( ' . implode( ',', $blobIds ) . ')' ), $fname );
-			while ( $row = $extDb->fetchObject( $res ) ) {
+			foreach ( $res as $row ) {
 				if ( strcasecmp( $row->header, CONCAT_HEADER ) ) {
-					$this->error( 'restore text', "Error: invalid header on target $cluster/{$row->blob_id} of two-part ES URL", 
+					$this->error( 'restore text', "Error: invalid header on target $cluster/{$row->blob_id} of two-part ES URL",
 						$oldIds[$row->blob_id] );
 				}
 				unset( $oldIds[$row->blob_id] );
@@ -391,8 +393,8 @@ class CheckStorage
 		// Run mwdumper
 		echo "Filtering XML dump...\n";
 		$exitStatus = 0;
-		passthru( 'mwdumper ' . 
-			wfEscapeShellArg( 
+		passthru( 'mwdumper ' .
+			wfEscapeShellArg(
 				"--output=file:$filteredXmlFileName",
 				"--filter=revlist:$revFileName",
 				$xml
@@ -410,8 +412,8 @@ class CheckStorage
 			return;
 		}
 
-		$dbr =& wfGetDB( DB_SLAVE );
-		$dbw =& wfGetDB( DB_MASTER );
+		$dbr = wfGetDB( DB_SLAVE );
+		$dbw = wfGetDB( DB_MASTER );
 		$dbr->ping();
 		$dbw->ping();
 		
@@ -443,7 +445,7 @@ class CheckStorage
 		}
 
 		// Find text row again
-		$dbr =& wfGetDB( DB_SLAVE );
+		$dbr = wfGetDB( DB_SLAVE );
 		$oldId = $dbr->selectField( 'revision', 'rev_text_id', array( 'rev_id' => $id ), $fname );
 		if ( !$oldId ) {
 			echo "Missing revision row for rev_id $id\n";
@@ -454,7 +456,8 @@ class CheckStorage
 		$flags = Revision::compressRevisionText( $text );
 
 		// Update the text row
-		$dbw->update( 'text', 
+		$dbw = wfGetDB( DB_MASTER );
+		$dbw->update( 'text',
 			array( 'old_flags' => $flags, 'old_text' => $text ),
 			array( 'old_id' => $oldId ),
 			$fname, array( 'LIMIT' => 1 )
@@ -465,4 +468,4 @@ class CheckStorage
 		$this->errors['fixed'][$id] = true;
 	}
 }
-?>
+

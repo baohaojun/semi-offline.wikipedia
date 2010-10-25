@@ -1,93 +1,75 @@
 <?php
-/**
- *
- * @package MediaWiki
- */
 
 /**
- * Pure virtual parent
- * @package MediaWiki
+ * Base class for general text storage via the "object" flag in old_flags, or 
+ * two-part external storage URLs. Used for represent efficient concatenated 
+ * storage, and migration-related pointer objects.
  */
-class HistoryBlob
+interface HistoryBlob
 {
-	/**
-	 * setMeta and getMeta currently aren't used for anything, I just thought
-	 * they might be useful in the future.
-	 * @param $meta String: a single string.
-	 */
-	function setMeta( $meta ) {}
-
-	/**
-	 * setMeta and getMeta currently aren't used for anything, I just thought
-	 * they might be useful in the future.
-	 * Gets the meta-value
-	 */
-	function getMeta() {}
-
 	/**
 	 * Adds an item of text, returns a stub object which points to the item.
 	 * You must call setLocation() on the stub object before storing it to the
 	 * database
+	 *
+	 * @return String: the key for getItem()
 	 */
-	function addItem() {}
+	public function addItem( $text );
 
 	/**
-	 * Get item by hash
+	 * Get item by key, or false if the key is not present
+	 *
+	 * @return String or false
 	 */
-	function getItem( $hash ) {}
+	public function getItem( $key );
 
-	# Set the "default text"
-	# This concept is an odd property of the current DB schema, whereby each text item has a revision
-	# associated with it. The default text is the text of the associated revision. There may, however,
-	# be other revisions in the same object
-	function setText() {}
+	/**
+	 * Set the "default text"
+	 * This concept is an odd property of the current DB schema, whereby each text item has a revision
+	 * associated with it. The default text is the text of the associated revision. There may, however,
+	 * be other revisions in the same object.
+	 *
+	 * Default text is not required for two-part external storage URLs.
+	 */
+	public function setText( $text );
 
 	/**
 	 * Get default text. This is called from Revision::getRevisionText()
+	 *
+	 * @return String
 	 */
-	function getText() {}
+	function getText();
 }
 
 /**
- * The real object
- * @package MediaWiki
+ * Concatenated gzip (CGZ) storage
+ * Improves compression ratio by concatenating like objects before gzipping
  */
-class ConcatenatedGzipHistoryBlob extends HistoryBlob
+class ConcatenatedGzipHistoryBlob implements HistoryBlob
 {
-	/* private */ var $mVersion = 0, $mCompressed = false, $mItems = array(), $mDefaultHash = '';
-	/* private */ var $mFast = 0, $mSize = 0;
+	public $mVersion = 0, $mCompressed = false, $mItems = array(), $mDefaultHash = '';
+	public $mSize = 0;
+	public $mMaxSize = 10000000;
+	public $mMaxCount = 100;
 
-	function ConcatenatedGzipHistoryBlob() {
+	/** Constructor */
+	public function ConcatenatedGzipHistoryBlob() {
 		if ( !function_exists( 'gzdeflate' ) ) {
 			throw new MWException( "Need zlib support to read or write this kind of history object (ConcatenatedGzipHistoryBlob)\n" );
 		}
 	}
 
-	/** @todo document */
-	function setMeta( $metaData ) {
-		$this->uncompress();
-		$this->mItems['meta'] = $metaData;
-	}
-
-	/** @todo document */
-	function getMeta() {
-		$this->uncompress();
-		return $this->mItems['meta'];
-	}
-
-	/** @todo document */
-	function addItem( $text ) {
+	public function addItem( $text ) {
 		$this->uncompress();
 		$hash = md5( $text );
-		$this->mItems[$hash] = $text;
-		$this->mSize += strlen( $text );
-
-		$stub = new HistoryBlobStub( $hash );
-		return $stub;
+		if ( !isset( $this->mItems[$hash] ) ) {
+			$this->mItems[$hash] = $text;
+			$this->mSize += strlen( $text );
+		}
+		return $hash;
 	}
 
-	/** @todo document */
-	function getItem( $hash ) {
+	public function getItem( $hash ) {
 		$this->uncompress();
 		if ( array_key_exists( $hash, $this->mItems ) ) {
 			return $this->mItems[$hash];
@@ -96,96 +78,86 @@ class ConcatenatedGzipHistoryBlob extends HistoryBlob
 		}
 	}
 
-	/** @todo document */
-	function removeItem( $hash ) {
+	public function setText( $text ) {
+		$this->uncompress();
+		$this->mDefaultHash = $this->addItem( $text );
+	}
+
+	public function getText() {
+		$this->uncompress();
+		return $this->getItem( $this->mDefaultHash );
+	}
+
+	/**
+	 * Remove an item
+	 */
+	public function removeItem( $hash ) {
 		$this->mSize -= strlen( $this->mItems[$hash] );
 		unset( $this->mItems[$hash] );
 	}
 
-	/** @todo document */
-	function compress() {
+	/**
+	 * Compress the bulk data in the object
+	 */
+	public function compress() {
 		if ( !$this->mCompressed  ) {
 			$this->mItems = gzdeflate( serialize( $this->mItems ) );
 			$this->mCompressed = true;
 		}
 	}
 
-	/** @todo document */
-	function uncompress() {
+	/**
+	 * Uncompress bulk data
+	 */
+	public function uncompress() {
 		if ( $this->mCompressed ) {
 			$this->mItems = unserialize( gzinflate( $this->mItems ) );
 			$this->mCompressed = false;
 		}
 	}
 
-	/** @todo document */
-	function getText() {
-		$this->uncompress();
-		return $this->getItem( $this->mDefaultHash );
-	}
 
-	/** @todo document */
-	function setText( $text ) {
-		$this->uncompress();
-		$stub = $this->addItem( $text );
-		$this->mDefaultHash = $stub->mHash;
-	}
-
-	/** @todo document */
 	function __sleep() {
 		$this->compress();
 		return array( 'mVersion', 'mCompressed', 'mItems', 'mDefaultHash' );
 	}
 
-	/** @todo document */
 	function __wakeup() {
 		$this->uncompress();
 	}
 
 	/**
-	 * Determines if this object is happy
+	 * Helper function for compression jobs
+	 * Returns true until the object is "full" and ready to be committed
 	 */
-	function isHappy( $maxFactor, $factorThreshold ) {
-		if ( count( $this->mItems ) == 0 ) {
-			return true;
-		}
-		if ( !$this->mFast ) {
-			$this->uncompress();
-			$record = serialize( $this->mItems );
-			$size = strlen( $record );
-			$avgUncompressed = $size / count( $this->mItems );
-			$compressed = strlen( gzdeflate( $record ) );
-
-			if ( $compressed < $factorThreshold * 1024 ) {
-				return true;
-			} else {
-				return $avgUncompressed * $maxFactor < $compressed;
-			}
-		} else {
-			return count( $this->mItems ) <= 10;
-		}
+	public function isHappy() {
+		return $this->mSize < $this->mMaxSize 
+			&& count( $this->mItems ) < $this->mMaxCount;
 	}
 }
 
 
-/**
- * One-step cache variable to hold base blobs; operations that
- * pull multiple revisions may often pull multiple times from
- * the same blob. By keeping the last-used one open, we avoid
- * redundant unserialization and decompression overhead.
- */
-global $wgBlobCache;
-$wgBlobCache = array();
 
 
 /**
- * @package MediaWiki
+ * Pointer object for an item within a CGZ blob stored in the text table.
  */
 class HistoryBlobStub {
+	/**
+	 * One-step cache variable to hold base blobs; operations that
+	 * pull multiple revisions may often pull multiple times from
+	 * the same blob. By keeping the last-used one open, we avoid
+	 * redundant unserialization and decompression overhead.
+	 */
+	protected static $blobCache = array();
+
 	var $mOldId, $mHash, $mRef;
 
-	/** @todo document */
-	function HistoryBlobStub( $hash = '', $oldid = 0 ) {
+	/**
+	 * @param $hash Strng: the content hash of the text
+	 * @param $oldid Integer: the old_id for the CGZ object
+	 */
+	function __construct( $hash = '', $oldid = 0 ) {
 		$this->mHash = $hash;
 	}
 
@@ -197,28 +169,27 @@ class HistoryBlobStub {
 		$this->mOldId = $id;
 	}
 
-      /**
-       * Sets the location (old_id) of the referring object
-       */
+	/**
+	 * Sets the location (old_id) of the referring object
+	 */
 	function setReferrer( $id ) {
 		$this->mRef = $id;
 	}
 
-      /**
-       * Gets the location of the referring object
-       */
+	/**
+	 * Gets the location of the referring object
+	 */
 	function getReferrer() {
 		return $this->mRef;
 	}
 
-	/** @todo document */
 	function getText() {
-		$fname = 'HistoryBlob::getText';
-		global $wgBlobCache;
-		if( isset( $wgBlobCache[$this->mOldId] ) ) {
-			$obj = $wgBlobCache[$this->mOldId];
+		$fname = 'HistoryBlobStub::getText';
+
+		if( isset( self::$blobCache[$this->mOldId] ) ) {
+			$obj = self::$blobCache[$this->mOldId];
 		} else {
-			$dbr =& wfGetDB( DB_SLAVE );
+			$dbr = wfGetDB( DB_SLAVE );
 			$row = $dbr->selectRow( 'text', array( 'old_flags', 'old_text' ), array( 'old_id' => $this->mOldId ) );
 			if( !$row ) {
 				return false;
@@ -226,12 +197,11 @@ class HistoryBlobStub {
 			$flags = explode( ',', $row->old_flags );
 			if( in_array( 'external', $flags ) ) {
 				$url=$row->old_text;
-				@list($proto,$path)=explode('://',$url,2);
+				@list( /* $proto */ ,$path)=explode('://',$url,2);
 				if ($path=="") {
 					wfProfileOut( $fname );
 					return false;
 				}
-				require_once('ExternalStore.php');
 				$row->old_text=ExternalStore::fetchFromUrl($url);
 
 			}
@@ -255,12 +225,14 @@ class HistoryBlobStub {
 			// Save this item for reference; if pulling many
 			// items in a row we'll likely use it again.
 			$obj->uncompress();
-			$wgBlobCache = array( $this->mOldId => $obj );
+			self::$blobCache = array( $this->mOldId => $obj );
 		}
 		return $obj->getItem( $this->mHash );
 	}
 
-	/** @todo document */
+	/**
+	 * Get the content hash
+	 */
 	function getHash() {
 		return $this->mHash;
 	}
@@ -274,14 +246,14 @@ class HistoryBlobStub {
  *
  * Serialized HistoryBlobCurStub objects will be inserted into the text table
  * on conversion if $wgFastSchemaUpgrades is set to true.
- *
- * @package MediaWiki
  */
 class HistoryBlobCurStub {
 	var $mCurId;
 
-	/** @todo document */
-	function HistoryBlobCurStub( $curid = 0 ) {
+	/**
+	 * @param $curid Integer: the cur_id pointed to
+	 */
+	function __construct( $curid = 0 ) {
 		$this->mCurId = $curid;
 	}
 
@@ -293,9 +265,8 @@ class HistoryBlobCurStub {
 		$this->mCurId = $id;
 	}
 
-	/** @todo document */
 	function getText() {
-		$dbr =& wfGetDB( DB_SLAVE );
+		$dbr = wfGetDB( DB_SLAVE );
 		$row = $dbr->selectRow( 'cur', array( 'cur_text' ), array( 'cur_id' => $this->mCurId ) );
 		if( !$row ) {
 			return false;
@@ -304,5 +275,310 @@ class HistoryBlobCurStub {
 	}
 }
 
+/**
+ * Diff-based history compression
+ * Requires xdiff 1.5+ and zlib
+ */
+class DiffHistoryBlob implements HistoryBlob {
+	/** Uncompressed item cache */
+	var $mItems = array();
 
-?>
+	/** Total uncompressed size */
+	var $mSize = 0;
+
+	/** 
+	 * Array of diffs. If a diff D from A to B is notated D = B - A, and Z is 
+	 * an empty string:
+	 *
+	 *              { item[map[i]] - item[map[i-1]]   where i > 0
+	 *    diff[i] = { 
+	 *              { item[map[i]] - Z                where i = 0
+	 */
+	var $mDiffs;
+
+	/** The diff map, see above */
+	var $mDiffMap;
+
+	/**
+	 * The key for getText()
+	 */
+	var $mDefaultKey;
+
+	/**
+	 * Compressed storage
+	 */
+	var $mCompressed;
+
+	/**
+	 * True if the object is locked against further writes
+	 */
+	var $mFrozen = false;
+
+	/**
+	 * The maximum uncompressed size before the object becomes sad
+	 * Should be less than max_allowed_packet
+	 */
+	var $mMaxSize = 10000000;
+
+	/**
+	 * The maximum number of text items before the object becomes sad
+	 */
+	var $mMaxCount = 100;
+	
+	/** Constants from xdiff.h */
+	const XDL_BDOP_INS = 1;
+	const XDL_BDOP_CPY = 2;
+	const XDL_BDOP_INSB = 3;
+
+	function __construct() {
+		if ( !function_exists( 'gzdeflate' ) ) {
+			throw new MWException( "Need zlib support to read or write DiffHistoryBlob\n" );
+		}
+	}
+
+	function addItem( $text ) {
+		if ( $this->mFrozen ) {
+			throw new MWException( __METHOD__.": Cannot add more items after sleep/wakeup" );
+		}
+
+		$this->mItems[] = $text;
+		$this->mSize += strlen( $text );
+		$this->mDiffs = null; // later
+		return count( $this->mItems ) - 1;
+	}
+
+	function getItem( $key ) {
+		return $this->mItems[$key];
+	}
+
+	function setText( $text ) {
+		$this->mDefaultKey = $this->addItem( $text );
+	}
+
+	function getText() {
+		return $this->getItem( $this->mDefaultKey );
+	}
+
+	function compress() {
+		if ( !function_exists( 'xdiff_string_rabdiff' ) ){ 
+			throw new MWException( "Need xdiff 1.5+ support to write DiffHistoryBlob\n" );
+		}
+		if ( isset( $this->mDiffs ) ) {
+			// Already compressed
+			return;
+		}
+		if ( !count( $this->mItems ) ) {
+			// Empty
+			return;
+		}
+
+		// Create two diff sequences: one for main text and one for small text
+		$sequences = array(
+			'small' => array(
+				'tail' => '',
+				'diffs' => array(),
+				'map' => array(),
+			),
+			'main' => array(
+				'tail' => '',
+				'diffs' => array(),
+				'map' => array(),
+			),
+		);
+		$smallFactor = 0.5;
+
+		for ( $i = 0; $i < count( $this->mItems ); $i++ ) {
+			$text = $this->mItems[$i];
+			if ( $i == 0 ) {
+				$seqName = 'main';
+			} else {
+				$mainTail = $sequences['main']['tail'];
+				if ( strlen( $text ) < strlen( $mainTail ) * $smallFactor ) {
+					$seqName = 'small';
+				} else {
+					$seqName = 'main';
+				}
+			}
+			$seq =& $sequences[$seqName];
+			$tail = $seq['tail'];
+			$diff = $this->diff( $tail, $text );
+			$seq['diffs'][] = $diff;
+			$seq['map'][] = $i;
+			$seq['tail'] = $text;
+		}
+		unset( $seq ); // unlink dangerous alias
+
+		// Knit the sequences together
+		$tail = '';
+		$this->mDiffs = array();
+		$this->mDiffMap = array();
+		foreach ( $sequences as $seq ) {
+			if ( !count( $seq['diffs'] ) ) {
+				continue;
+			}
+			if ( $tail === '' ) {
+				$this->mDiffs[] = $seq['diffs'][0];
+			} else {
+				$head = $this->patch( '', $seq['diffs'][0] );
+				$this->mDiffs[] = $this->diff( $tail, $head );
+			}
+			$this->mDiffMap[] = $seq['map'][0];
+			for ( $i = 1; $i < count( $seq['diffs'] ); $i++ ) {
+				$this->mDiffs[] = $seq['diffs'][$i];
+				$this->mDiffMap[] = $seq['map'][$i];
+			}
+			$tail = $seq['tail'];
+		}
+	}
+
+	function diff( $t1, $t2 ) {
+		# Need to do a null concatenation with warnings off, due to bugs in the current version of xdiff
+		# "String is not zero-terminated"
+		wfSuppressWarnings();
+		$diff = xdiff_string_rabdiff( $t1, $t2 ) . '';
+		wfRestoreWarnings();
+		return $diff;
+	}
+
+	function patch( $base, $diff ) {
+		if ( function_exists( 'xdiff_string_bpatch' ) ) {
+			wfSuppressWarnings();
+			$text = xdiff_string_bpatch( $base, $diff ) . '';
+			wfRestoreWarnings();
+			return $text;
+		}
+
+		# Pure PHP implementation
+
+		$header = unpack( 'Vofp/Vcsize', substr( $diff, 0, 8 ) );
+		
+		# Check the checksum if mhash is available
+		if ( extension_loaded( 'mhash' ) ) {
+			$ofp = mhash( MHASH_ADLER32, $base );
+			if ( $ofp !== substr( $diff, 0, 4 ) ) {
+				wfDebug( __METHOD__. ": incorrect base checksum\n" );
+				return false;
+			}
+		}
+		if ( $header['csize'] != strlen( $base ) ) {
+			wfDebug( __METHOD__. ": incorrect base length\n" );
+			return false;
+		}
+		
+		$p = 8;
+		$out = '';
+		while ( $p < strlen( $diff ) ) {
+			$x = unpack( 'Cop', substr( $diff, $p, 1 ) );
+			$op = $x['op'];
+			++$p;
+			switch ( $op ) {
+			case self::XDL_BDOP_INS:
+				$x = unpack( 'Csize', substr( $diff, $p, 1 ) );
+				$p++;
+				$out .= substr( $diff, $p, $x['size'] );
+				$p += $x['size'];
+				break;
+			case self::XDL_BDOP_INSB:
+				$x = unpack( 'Vcsize', substr( $diff, $p, 4 ) );
+				$p += 4;
+				$out .= substr( $diff, $p, $x['csize'] );
+				$p += $x['csize'];
+				break;
+			case self::XDL_BDOP_CPY:
+				$x = unpack( 'Voff/Vcsize', substr( $diff, $p, 8 ) );
+				$p += 8;
+				$out .= substr( $base, $x['off'], $x['csize'] );
+				break;
+			default:
+				wfDebug( __METHOD__.": invalid op\n" );
+				return false;
+			}
+		}
+		return $out;
+	}
+
+	function uncompress() {
+		if ( !$this->mDiffs ) {
+			return;
+		}
+		$tail = '';
+		for ( $diffKey = 0; $diffKey < count( $this->mDiffs ); $diffKey++ ) {
+			$textKey = $this->mDiffMap[$diffKey];
+			$text = $this->patch( $tail, $this->mDiffs[$diffKey] );
+			$this->mItems[$textKey] = $text;
+			$tail = $text;
+		}
+	}
+
+	function __sleep() {
+		$this->compress();
+		if ( !count( $this->mItems ) ) {
+			// Empty object
+			$info = false;
+		} else {
+			// Take forward differences to improve the compression ratio for sequences
+			$map = '';
+			$prev = 0;
+			foreach ( $this->mDiffMap as $i ) {
+				if ( $map !== '' ) {
+					$map .= ',';
+				}
+				$map .= $i - $prev;
+				$prev = $i;
+			}
+			$info = array(
+				'diffs' => $this->mDiffs,
+				'map' => $map
+			);
+		}
+		if ( isset( $this->mDefaultKey ) ) {
+			$info['default'] = $this->mDefaultKey;
+		}
+		$this->mCompressed = gzdeflate( serialize( $info ) );
+		return array( 'mCompressed' );
+	}
+
+	function __wakeup() {
+		// addItem() doesn't work if mItems is partially filled from mDiffs
+		$this->mFrozen = true;
+		$info = unserialize( gzinflate( $this->mCompressed ) );
+		unset( $this->mCompressed );
+
+		if ( !$info ) {
+			// Empty object
+			return;
+		}
+
+		if ( isset( $info['default'] ) ) {
+			$this->mDefaultKey = $info['default'];
+		}
+		$this->mDiffs = $info['diffs'];
+		if ( isset( $info['base'] ) ) {
+			// Old format
+			$this->mDiffMap = range( 0, count( $this->mDiffs ) - 1 );
+			array_unshift( $this->mDiffs, 
+				pack( 'VVCV', 0, 0, self::XDL_BDOP_INSB, strlen( $info['base'] ) ) .
+				$info['base'] );
+		} else {
+			// New format
+			$map = explode( ',', $info['map'] );
+			$cur = 0;
+			$this->mDiffMap = array();
+			foreach ( $map as $i ) {
+				$cur += $i;
+				$this->mDiffMap[] = $cur;
+			}
+		}
+		$this->uncompress();
+	}
+
+	/**
+	 * Helper function for compression jobs
+	 * Returns true until the object is "full" and ready to be committed
+	 */
+	function isHappy() {
+		return $this->mSize < $this->mMaxSize 
+			&& count( $this->mItems ) < $this->mMaxCount;
+	}
+
+}

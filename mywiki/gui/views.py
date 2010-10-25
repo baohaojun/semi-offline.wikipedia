@@ -7,7 +7,9 @@ def index(request):
 def article(request, article):
     article = article.encode('utf-8')
     if article.endswith("/"):
-	article = article[:-1]
+        article = article[:-1]
+    if article.endswith("/&redlink=1"):
+        article = article[:-11]
     result = "Not found"
     print "Searching for exact article", article
     print "./quickstartsearch db/ \"%s\"" % article.replace('_', ' ')

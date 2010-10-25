@@ -3,7 +3,7 @@
 --
 CREATE TABLE /*$wgDBprefix*/templatelinks (
   -- Key to the page_id of the page containing the link.
-  tl_from int(8) unsigned NOT NULL default '0',
+  tl_from int unsigned NOT NULL default '0',
   
   -- Key to page_namespace/page_title of the target page.
   -- The target page may or may not exist, and due to renames
@@ -15,5 +15,5 @@ CREATE TABLE /*$wgDBprefix*/templatelinks (
   UNIQUE KEY tl_from(tl_from,tl_namespace,tl_title),
   KEY (tl_namespace,tl_title)
 
-) TYPE=InnoDB;
+) /*$wgDBTableOptions*/;
 

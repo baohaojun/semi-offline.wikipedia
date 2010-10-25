@@ -1,7 +1,8 @@
 <?php
 /**
  * MediaWiki error classes
- * Copyright (C) 2005 Brion Vibber <brion@pobox.com>
+ *
+ * Copyright © 2005 Brion Vibber <brion@pobox.com>
  * http://www.mediawiki.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -19,19 +20,19 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  * http://www.gnu.org/copyleft/gpl.html
  *
- * @package MediaWiki
+ * @file
  */
 
 /**
  * Since PHP4 doesn't have exceptions, here's some error objects
  * loosely modeled on the standard PEAR_Error model...
- * @package MediaWiki
+ * @ingroup Exception
  */
 class WikiError {
 	/**
-	 * @param string $message
+	 * @param $message string
 	 */
-	function WikiError( $message ) {
+	function __construct( $message ) {
 		$this->mMessage = $message;
 	}
 
@@ -55,41 +56,53 @@ class WikiError {
 	 * Returns true if the given object is a WikiError-descended
 	 * error object, false otherwise.
 	 *
-	 * @param mixed $object
+	 * @param $object mixed
 	 * @return bool
-	 * @static
 	 */
-	function isError( &$object ) {
-		return is_a( $object, 'WikiError' );
+	public static function isError( $object ) {
+		return $object instanceof WikiError;
 	}
 }
 
 /**
  * Localized error message object
- * @package MediaWiki
+ * @ingroup Exception
  */
 class WikiErrorMsg extends WikiError {
 	/**
-	 * @param string $message Wiki message name
+	 * @param $message String: wiki message name
 	 * @param ... parameters to pass to wfMsg()
 	 */
-	function WikiErrorMsg( $message/*, ... */ ) {
+	function __construct( $message/*, ... */ ) {
 		$args = func_get_args();
 		array_shift( $args );
 		$this->mMessage = wfMsgReal( $message, $args, true );
+		$this->mMsgKey = $message;
+		$this->mMsgArgs = $args;
+	}
+	
+	function getMessageKey() {
+		return $this->mMsgKey;
+	}
+	
+	function getMessageArgs() {
+		return $this->mMsgArgs;
 	}
 }
 
 /**
- * @package MediaWiki
- * @todo document
+ * Error class designed to handle errors involved with 
+ * XML parsing
+ * @ingroup Exception
  */
 class WikiXmlError extends WikiError {
 	/**
-	 * @param resource $parser
-	 * @param string $message
+	 * @param $parser resource
+	 * @param $message string
+	 * @param $context
+	 * @param $offset Int
 	 */
-	function WikiXmlError( $parser, $message = 'XML parsing error', $context = null, $offset = 0 ) {
+	function __construct( $parser, $message = 'XML parsing error', $context = null, $offset = 0 ) {
 		$this->mXmlError = xml_get_error_code( $parser );
 		$this->mColumn = xml_get_current_column_number( $parser );
 		$this->mLine = xml_get_current_line_number( $parser );
@@ -102,12 +115,12 @@ class WikiXmlError extends WikiError {
 
 	/** @return string */
 	function getMessage() {
-		return sprintf( '%s at line %d, col %d (byte %d%s): %s',
+		// '$1 at line $2, col $3 (byte $4): $5',
+		return wfMsgHtml( 'xml-error-string',
 			$this->mMessage,
 			$this->mLine,
 			$this->mColumn,
-			$this->mByte,
-			$this->mContext,
+			$this->mByte . $this->mContext,
 			xml_error_string( $this->mXmlError ) );
 	}
 
@@ -121,5 +134,3 @@ class WikiXmlError extends WikiError {
 		}
 	}
 }
-
-?>

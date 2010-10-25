@@ -22,12 +22,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  * http://www.gnu.org/copyleft/gpl.html
  *
- * @package MediaWiki
- * @subpackage SpecialPage
+ * @ingroup SpecialPage
  */
 
 class MacBinary {
-	function MacBinary( $filename ) {
+	function __construct( $filename ) {
 		$this->open( $filename );
 		$this->loadHeader();
 	}
@@ -36,7 +35,7 @@ class MacBinary {
 	 * The file must be seekable, such as local filesystem.
 	 * Remote URLs probably won't work.
 	 *
-	 * @param string $filename
+	 * @param $filename String
 	 */
 	function open( $filename ) {
 		$this->valid = false;
@@ -49,7 +48,8 @@ class MacBinary {
 
 	/**
 	 * Does this appear to be a valid MacBinary archive?
-	 * @return bool
+	 *
+	 * @return Boolean
 	 */
 	function isValid() {
 		return $this->valid;
@@ -57,7 +57,8 @@ class MacBinary {
 
 	/**
 	 * Get length of data fork
-	 * @return int
+	 *
+	 * @return Integer
 	 */
 	function dataForkLength() {
 		return $this->dataLength;
@@ -65,8 +66,9 @@ class MacBinary {
 
 	/**
 	 * Copy the data fork to an external file or resource.
-	 * @param resource $destination
-	 * @return bool
+	 *
+	 * @param $destination Ressource
+	 * @return Boolean
 	 */
 	function extractData( $destination ) {
 		if( !$this->isValid() ) {
@@ -101,7 +103,7 @@ class MacBinary {
 
 		fseek( $this->handle, 0 );
 		$head = fread( $this->handle, 128 );
-		$this->hexdump( $head );
+		#$this->hexdump( $head );
 
 		if( strlen( $head ) < 128 ) {
 			wfDebug( "$fname: couldn't read full MacBinary header\n" );
@@ -174,9 +176,9 @@ class MacBinary {
 	 * with magic array thingy by Jim Van Verth.
 	 * http://search.cpan.org/~eryq/Convert-BinHex-1.119/lib/Convert/BinHex.pm
 	 *
-	 * @param string $data
-	 * @param int $seed
-	 * @return int
+	 * @param $data String
+	 * @param $seed Integer
+	 * @return Integer
 	 * @access private
 	 */
 	function calcCRC( $data, $seed = 0 ) {
@@ -227,9 +229,9 @@ class MacBinary {
 	}
 
 	/**
-	 * @param resource $destination
-	 * @param int $bytesToCopy
-	 * @return bool
+	 * @param $destination Resource
+	 * @param $bytesToCopy Integer
+	 * @return Boolean
 	 * @access private
 	 */
 	function copyBytesTo( $destination, $bytesToCopy ) {
@@ -268,5 +270,3 @@ class MacBinary {
 		}
 	}
 }
-
-?>

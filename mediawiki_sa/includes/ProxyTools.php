@@ -1,134 +1,147 @@
 <?php
 /**
  * Functions for dealing with proxies
- * @package MediaWiki
+ *
+ * @file
  */
 
+/**
+ * Extracts the XFF string from the request header
+ * Checks first for "X-Forwarded-For", then "Client-ip"
+ * Note: headers are spoofable
+ * @return string
+ */
 function wfGetForwardedFor() {
 	if( function_exists( 'apache_request_headers' ) ) {
 		// More reliable than $_SERVER due to case and -/_ folding
-		$set = apache_request_headers();
-		$index = 'X-Forwarded-For';
+		$set = array ();
+		foreach ( apache_request_headers() as $tempName => $tempValue ) {
+			$set[ strtoupper( $tempName ) ] = $tempValue;
+		}
+		$index = strtoupper ( 'X-Forwarded-For' );
+		$index2 = strtoupper ( 'Client-ip' );
 	} else {
 		// Subject to spoofing with headers like X_Forwarded_For
 		$set = $_SERVER;
 		$index = 'HTTP_X_FORWARDED_FOR';
+		$index2 = 'CLIENT-IP';
 	}
+
+	#Try a couple of headers
 	if( isset( $set[$index] ) ) {
 		return $set[$index];
+	} else if( isset( $set[$index2] ) ) {
+		return $set[$index2];
 	} else {
 		return null;
 	}
 }
 
-/** Work out the IP address based on various globals */
+/**
+ * Returns the browser/OS data from the request header
+ * Note: headers are spoofable
+ * @return string
+ */
+function wfGetAgent() {
+	if( function_exists( 'apache_request_headers' ) ) {
+		// More reliable than $_SERVER due to case and -/_ folding
+		$set = array ();
+		foreach ( apache_request_headers() as $tempName => $tempValue ) {
+			$set[ strtoupper( $tempName ) ] = $tempValue;
+		}
+		$index = strtoupper ( 'User-Agent' );
+	} else {
+		// Subject to spoofing with headers like X_Forwarded_For
+		$set = $_SERVER;
+		$index = 'HTTP_USER_AGENT';
+	}
+	if( isset( $set[$index] ) ) {
+		return $set[$index];
+	} else {
+		return '';
+	}
+}
+
+/**
+ * Work out the IP address based on various globals
+ * For trusted proxies, use the XFF client IP (first of the chain)
+ * @return string
+ */
 function wfGetIP() {
-	global $wgSquidServers, $wgSquidServersNoPurge, $wgIP;
+	global $wgUsePrivateIPs, $wgCommandLineMode;
+	static $ip = false;
 
 	# Return cached result
-	if ( !empty( $wgIP ) ) {
-		return $wgIP;
+	if ( !empty( $ip ) ) {
+		return $ip;
 	}
+
+	$ipchain = array();
 
 	/* collect the originating ips */
 	# Client connecting to this webserver
 	if ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
-		$ipchain = array( $_SERVER['REMOTE_ADDR'] );
-	} else {
-		# Running on CLI?
-		$ipchain = array( '127.0.0.1' );
+		$ip = IP::canonicalize( $_SERVER['REMOTE_ADDR'] );
+	} elseif( $wgCommandLineMode ) {
+		$ip = '127.0.0.1';
 	}
-	$ip = $ipchain[0];
+	if( $ip ) {
+		$ipchain[] = $ip;
+	}
 
-	# Get list of trusted proxies
-	# Flipped for quicker access
-	$trustedProxies = array_flip( array_merge( $wgSquidServers, $wgSquidServersNoPurge ) );
-	if ( count( $trustedProxies ) ) {
-		# Append XFF on to $ipchain
-		$forwardedFor = wfGetForwardedFor();
-		if ( isset( $forwardedFor ) ) {
-			$xff = array_map( 'trim', explode( ',', $forwardedFor ) );
-			$xff = array_reverse( $xff );
-			$ipchain = array_merge( $ipchain, $xff );
-		}
-		# Step through XFF list and find the last address in the list which is a trusted server
-		# Set $ip to the IP address given by that trusted server, unless the address is not sensible (e.g. private)
-		foreach ( $ipchain as $i => $curIP ) {
-			if ( array_key_exists( $curIP, $trustedProxies ) ) {
-				if ( isset( $ipchain[$i + 1] ) && wfIsIPPublic( $ipchain[$i + 1] ) ) {
+	# Append XFF on to $ipchain
+	$forwardedFor = wfGetForwardedFor();
+	if ( isset( $forwardedFor ) ) {
+		$xff = array_map( 'trim', explode( ',', $forwardedFor ) );
+		$xff = array_reverse( $xff );
+		$ipchain = array_merge( $ipchain, $xff );
+	}
+
+	# Step through XFF list and find the last address in the list which is a trusted server
+	# Set $ip to the IP address given by that trusted server, unless the address is not sensible (e.g. private)
+	foreach ( $ipchain as $i => $curIP ) {
+		$curIP = IP::canonicalize( $curIP );
+		if ( wfIsTrustedProxy( $curIP ) ) {
+			if ( isset( $ipchain[$i + 1] ) ) {
+				if( $wgUsePrivateIPs || IP::isPublic( $ipchain[$i + 1 ] ) ) {
 					$ip = $ipchain[$i + 1];
 				}
-			} else {
-				break;
 			}
+		} else {
+			break;
 		}
+	}
+
+	# Allow extensions to improve our guess
+	wfRunHooks( 'GetIP', array( &$ip ) );
+
+	if( !$ip ) {
+		throw new MWException( "Unable to determine IP" );
 	}
 
 	wfDebug( "IP: $ip\n" );
-	$wgIP = $ip;
 	return $ip;
 }
 
 /**
- * Given an IP address in dotted-quad notation, returns an unsigned integer.
- * Like ip2long() except that it actually works and has a consistent error return value.
+ * Checks if an IP is a trusted proxy providor
+ * Useful to tell if X-Fowarded-For data is possibly bogus
+ * Squid cache servers for the site and AOL are whitelisted
+ * @param $ip String
+ * @return bool
  */
-function wfIP2Unsigned( $ip ) {
-	$n = ip2long( $ip );
-	if ( $n == -1 || $n === false ) { # Return value on error depends on PHP version
-		$n = false;
-	} elseif ( $n < 0 ) {
-		$n += pow( 2, 32 );
-	}
-	return $n;
-}
+function wfIsTrustedProxy( $ip ) {
+	global $wgSquidServers, $wgSquidServersNoPurge;
 
-/**
- * Return a zero-padded hexadecimal representation of an IP address
- */
-function wfIP2Hex( $ip ) {
-	$n = wfIP2Unsigned( $ip );
-	if ( $n !== false ) {
-		$n = sprintf( '%08X', $n );
+	if ( in_array( $ip, $wgSquidServers ) ||
+		in_array( $ip, $wgSquidServersNoPurge )
+	) {
+		$trusted = true;
+	} else {
+		$trusted = false;
 	}
-	return $n;
-}
-
-/**
- * Determine if an IP address really is an IP address, and if it is public,
- * i.e. not RFC 1918 or similar
- */
-function wfIsIPPublic( $ip ) {
-	$n = wfIP2Unsigned( $ip );
-	if ( !$n ) {
-		return false;
-	}
-	
-	// ip2long accepts incomplete addresses, as well as some addresses
-	// followed by garbage characters. Check that it's really valid.
-	if( $ip != long2ip( $n ) ) {
-		return false;
-	}
-
-	static $privateRanges = false;
-	if ( !$privateRanges ) {
-		$privateRanges = array(
-			array( '10.0.0.0',    '10.255.255.255' ),   # RFC 1918 (private)
-			array( '172.16.0.0',  '172.31.255.255' ),   #     "
-			array( '192.168.0.0', '192.168.255.255' ),  #     "
-			array( '0.0.0.0',     '0.255.255.255' ),    # this network
-			array( '127.0.0.0',   '127.255.255.255' ),  # loopback
-		);
-	}
-
-	foreach ( $privateRanges as $r ) {
-		$start = wfIP2Unsigned( $r[0] );
-		$end = wfIP2Unsigned( $r[1] );
-		if ( $n >= $start && $n <= $end ) {
-			return false;
-		}
-	}
-	return true;
+	wfRunHooks( 'IsTrustedProxy', array( &$ip, &$trusted ) );
+	return $trusted;
 }
 
 /**
@@ -137,7 +150,7 @@ function wfIsIPPublic( $ip ) {
  */
 function wfProxyCheck() {
 	global $wgBlockOpenProxies, $wgProxyPorts, $wgProxyScriptPath;
-	global $wgUseMemCached, $wgMemc, $wgDBname, $wgProxyMemcExpiry;
+	global $wgMemc, $wgProxyMemcExpiry;
 	global $wgProxyKey;
 
 	if ( !$wgBlockOpenProxies ) {
@@ -147,18 +160,13 @@ function wfProxyCheck() {
 	$ip = wfGetIP();
 
 	# Get MemCached key
-	$skip = false;
-	if ( $wgUseMemCached ) {
-		$mcKey = "$wgDBname:proxy:ip:$ip";
-		$mcValue = $wgMemc->get( $mcKey );
-		if ( $mcValue ) {
-			$skip = true;
-		}
-	}
+	$mcKey = wfMemcKey( 'proxy', 'ip', $ip );
+	$mcValue = $wgMemc->get( $mcKey );
+	$skip = (bool)$mcValue;
 
 	# Fork the processes
 	if ( !$skip ) {
-		$title = Title::makeTitle( NS_SPECIAL, 'Blockme' );
+		$title = SpecialPage::getTitleFor( 'Blockme' );
 		$iphash = md5( $ip . $wgProxyKey );
 		$url = $title->getFullURL( 'ip='.$iphash );
 
@@ -169,44 +177,32 @@ function wfProxyCheck() {
 						escapeshellarg( $port ),
 						escapeshellarg( $url )
 						));
-			exec( "php $params &>/dev/null &" );
+			exec( "php $params >" . wfGetNull() . " 2>&1 &" );
 		}
 		# Set MemCached key
-		if ( $wgUseMemCached ) {
-			$wgMemc->set( $mcKey, 1, $wgProxyMemcExpiry );
-		}
+		$wgMemc->set( $mcKey, 1, $wgProxyMemcExpiry );
 	}
 }
 
 /**
  * Convert a network specification in CIDR notation to an integer network and a number of bits
+ * @return array(string, int)
  */
 function wfParseCIDR( $range ) {
-	$parts = explode( '/', $range, 2 );
-	if ( count( $parts ) != 2 ) {
-		return array( false, false );
-	}
-	$network = wfIP2Unsigned( $parts[0] );
-	if ( $network !== false && is_numeric( $parts[1] ) && $parts[1] >= 0 && $parts[1] <= 32 ) {
-		$bits = $parts[1];
-	} else {
-		$network = false;
-		$bits = false;
-	}
-	return array( $network, $bits );
+	return IP::parseCIDR( $range );
 }
 
 /**
  * Check if an IP address is in the local proxy list
+ * @return bool
  */
 function wfIsLocallyBlockedProxy( $ip ) {
 	global $wgProxyList;
-	$fname = 'wfIsLocallyBlockedProxy';
 
 	if ( !$wgProxyList ) {
 		return false;
 	}
-	wfProfileIn( $fname );
+	wfProfileIn( __METHOD__ );
 
 	if ( !is_array( $wgProxyList ) ) {
 		# Load from the specified file
@@ -223,11 +219,7 @@ function wfIsLocallyBlockedProxy( $ip ) {
 	} else {
 		$ret = false;
 	}
-	wfProfileOut( $fname );
+	wfProfileOut( __METHOD__ );
 	return $ret;
 }
 
-
-
-
-?>

@@ -1,61 +1,119 @@
 <?php
+
 /**
- * Image download authorisation script
+ * Image authorisation script
  *
- * To use, in LocalSettings.php set $wgUploadDirectory to point to a non-public
- * directory, and $wgUploadPath to point to this file. Also set $wgWhitelistRead
- * to an array of pages you want everyone to be able to access. Your server must
- * support PATH_INFO, CGI-based configurations generally don't.
- */
-# Valid web server entry point, enable includes
-define( 'MEDIAWIKI', true );
+ * To use this, see http://www.mediawiki.org/wiki/Manual:Image_Authorization
+ *
+ * - Set $wgUploadDirectory to a non-public directory (not web accessible)
+ * - Set $wgUploadPath to point to this file
+ *
+ * Optional Parameters
+ *
+ * - Set $wgImgAuthDetails = true if you want the reason the access was denied messages to be displayed 
+ *       instead of just the 403 error (doesn't work on IE anyway),  otherwise will only appear in error logs
+ * - Set $wgImgAuthPublicTest false if you don't want to just check and see if all are public
+ *       must be set to false if using specific restrictions such as LockDown or NSFileRepo
+ *
+ *  For security reasons, you usually don't want your user to know *why* access was denied, just that it was.
+ *  If you want to change this, you can set $wgImgAuthDetails to 'true' in localsettings.php and it will give the user the reason
+ *  why access was denied.
+ *
+ * Your server needs to support PATH_INFO; CGI-based configurations usually don't.
+ *
+ * @file
+ *
+ **/
 
-if ( isset( $_REQUEST['GLOBALS'] ) ) {
-	echo '<a href="http://www.hardened-php.net/index.76.html">$GLOBALS overwrite vulnerability</a>';
-	die( -1 );
+define( 'MW_NO_OUTPUT_COMPRESSION', 1 );
+require_once( dirname( __FILE__ ) . '/includes/WebStart.php' );
+wfProfileIn( 'img_auth.php' );
+require_once( dirname( __FILE__ ) . '/includes/StreamFile.php' );
+
+// See if this is a public Wiki (no protections)
+if ( $wgImgAuthPublicTest 
+	&& in_array( 'read', User::getGroupPermissions( array( '*' ) ), true ) )
+{
+	wfForbidden('img-auth-accessdenied','img-auth-public');
 }
 
-require_once( 'includes/Defines.php' );
-require_once( './LocalSettings.php' );
-require_once( 'includes/Setup.php' );
-require_once( 'includes/StreamFile.php' );
-
+// Extract path and image information
 if( !isset( $_SERVER['PATH_INFO'] ) ) {
-	wfForbidden();
+	$path = $wgRequest->getText( 'path' );
+	if( !$path ) {
+        wfForbidden( 'img-auth-accessdenied', 'img-auth-nopathinfo' );
+	}
+} else {
+	$path = $_SERVER['PATH_INFO'];
 }
 
-# Get filenames/directories
-$filename = realpath( $wgUploadDirectory . $_SERVER['PATH_INFO'] );
-$realUploadDirectory = realpath( $wgUploadDirectory );
-$imageName = $wgLang->getNsText( NS_IMAGE ) . ":" . basename( $_SERVER['PATH_INFO'] );
+$filename = realpath( $wgUploadDirectory . '/' . $path );
+$realUpload = realpath( $wgUploadDirectory );
 
-# Check if the filename is in the correct directory
-if ( substr( $filename, 0, strlen( $realUploadDirectory ) ) != $realUploadDirectory ) {
-	wfForbidden();
-}
+// Basic directory traversal check
+if( substr( $filename, 0, strlen( $realUpload ) ) != $realUpload )
+	wfForbidden('img-auth-accessdenied','img-auth-notindir');
 
-if ( is_array( $wgWhitelistRead ) && !in_array( $imageName, $wgWhitelistRead ) && !$wgUser->getID() ) {
-	wfForbidden();
-}
+// Extract the file name and chop off the size specifier
+// (e.g. 120px-Foo.png => Foo.png)
+$name = wfBaseName( $path );
+if( preg_match( '!\d+px-(.*)!i', $name, $m ) )
+	$name = $m[1];
 
-if( !file_exists( $filename ) ) {
-	wfForbidden();
-}
-if( is_dir( $filename ) ) {
-	wfForbidden();
-}
+// Check to see if the file exists
+if( !file_exists( $filename ) )
+	wfForbidden('img-auth-accessdenied','img-auth-nofile',$filename);
 
-# Write file
-wfStreamFile( $filename );
+// Check to see if tried to access a directory
+if( is_dir( $filename ) )
+	wfForbidden('img-auth-accessdenied','img-auth-isdir',$filename);
 
-function wfForbidden() {
+
+$title = Title::makeTitleSafe( NS_FILE, $name );
+
+// See if could create the title object
+if( !$title instanceof Title ) 
+	wfForbidden('img-auth-accessdenied','img-auth-badtitle',$name);
+
+// Run hook
+if (!wfRunHooks( 'ImgAuthBeforeStream', array( &$title, &$path, &$name, &$result ) ) )
+	wfForbidden($result[0],$result[1],array_slice($result,2));
+	
+//  Check user authorization for this title
+//  UserCanRead Checks Whitelist too
+if( !$title->userCanRead() ) 
+	wfForbidden('img-auth-accessdenied','img-auth-noread',$name);
+
+// Stream the requested file
+wfDebugLog( 'img_auth', "Streaming `".$filename."`." );
+wfStreamFile( $filename, array( 'Cache-Control: private', 'Vary: Cookie' ) );
+wfLogProfilingData();
+
+/**
+ * Issue a standard HTTP 403 Forbidden header ($msg1-a message index, not a message) and an
+ * error message ($msg2, also a message index), (both required) then end the script
+ * subsequent arguments to $msg2 will be passed as parameters only for replacing in $msg2 
+ */
+function wfForbidden($msg1,$msg2) {
+	global $wgImgAuthDetails;
+	$args = func_get_args();
+	array_shift( $args );
+	array_shift( $args );
+	$MsgHdr = htmlspecialchars(wfMsg($msg1));
+	$detailMsg = (htmlspecialchars(wfMsg(($wgImgAuthDetails ? $msg2 : 'badaccess-group0'),$args)));
+	wfDebugLog('img_auth', "wfForbidden Hdr:".wfMsgExt( $msg1, array('language' => 'en'))." Msg: ".
+				wfMsgExt($msg2,array('language' => 'en'),$args));
 	header( 'HTTP/1.0 403 Forbidden' );
-	print
-"<html><body>
-<h1>Access denied</h1>
-<p>You need to log in to access files on this server</p>
-</body></html>";
-	exit;
+	header( 'Cache-Control: no-cache' );
+	header( 'Content-Type: text/html; charset=utf-8' );
+	echo <<<ENDS
+<html>
+<body>
+<h1>$MsgHdr</h1>
+<p>$detailMsg</p>
+</body>
+</html>
+ENDS;
+	wfLogProfilingData();
+	exit();
 }
-
-?>

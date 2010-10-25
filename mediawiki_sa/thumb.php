@@ -2,84 +2,185 @@
 
 /**
  * PHP script to stream out an image thumbnail.
- * If the file exists, we make do with abridged MediaWiki initialisation.
+ *
+ * @file
+ * @ingroup Media
  */
-
-define( 'MEDIAWIKI', true );
-unset( $IP );
-if ( isset( $_REQUEST['GLOBALS'] ) ) {
-	echo '<a href="http://www.hardened-php.net/index.76.html">$GLOBALS overwrite vulnerability</a>';
-	die( -1 );
-}
-
-define( 'MW_NO_OUTPUT_BUFFER', true );
-
-require_once( './includes/Defines.php' );
-require_once( './LocalSettings.php' );
-require_once( 'GlobalFunctions.php' );
-require_once( 'ImageFunctions.php' );
+define( 'MW_NO_OUTPUT_COMPRESSION', 1 );
+require_once( './includes/WebStart.php' );
 
 $wgTrivialMimeDetection = true; //don't use fancy mime detection, just check the file extension for jpg/gif/png.
 
-require_once( 'Image.php' );
-require_once( 'StreamFile.php' );
+require_once( "$IP/includes/StreamFile.php" );
 
-// Get input parameters
+wfThumbMain();
+wfLogProfilingData();
 
-if ( get_magic_quotes_gpc() ) {
-	$fileName = stripslashes( $_REQUEST['f'] );
-	$width = stripslashes( $_REQUEST['w'] );
-} else {
-	$fileName = $_REQUEST['f'];
-	$width = $_REQUEST['w'];
+//--------------------------------------------------------------------------
+
+function wfThumbMain() {
+	wfProfileIn( __METHOD__ );
+
+	$headers = array();
+
+	// Get input parameters
+	if ( get_magic_quotes_gpc() ) {
+		$params = array_map( 'stripslashes', $_REQUEST );
+	} else {
+		$params = $_REQUEST;
+	}
+
+	$fileName = isset( $params['f'] ) ? $params['f'] : '';
+	unset( $params['f'] );
+
+	// Backwards compatibility parameters
+	if ( isset( $params['w'] ) ) {
+		$params['width'] = $params['w'];
+		unset( $params['w'] );
+	}
+	if ( isset( $params['p'] ) ) {
+		$params['page'] = $params['p'];
+	}
+	unset( $params['r'] );
+
+	// Is this a thumb of an archived file?
+	$isOld = (isset( $params['archived'] ) && $params['archived']);
+	unset( $params['archived'] );
+
+	// Some basic input validation
+	$fileName = strtr( $fileName, '\\/', '__' );
+
+	// Actually fetch the image. Method depends on whether it is archived or not.
+	if( $isOld ) {
+		// Format is <timestamp>!<name>
+		$bits = explode( '!', $fileName, 2 );
+		if( !isset($bits[1]) ) {
+			wfThumbError( 404, wfMsg( 'badtitletext' ) );
+			return;
+		}
+		$title = Title::makeTitleSafe( NS_FILE, $bits[1] );
+		if( is_null($title) ) {
+			wfThumbError( 404, wfMsg( 'badtitletext' ) );
+			return;
+		}
+		$img = RepoGroup::singleton()->getLocalRepo()->newFromArchiveName( $title, $fileName );
+	} else {
+		$img = wfLocalFile( $fileName );
+	}
+
+	// Check permissions if there are read restrictions
+	if ( !in_array( 'read', User::getGroupPermissions( array( '*' ) ), true ) ) {
+		if ( !$img->getTitle()->userCanRead() ) {
+			wfThumbError( 403, 'Access denied. You do not have permission to access ' . 
+				'the source file.' );
+			return;
+		}
+		$headers[] = 'Cache-Control: private';
+		$headers[] = 'Vary: Cookie';
+	}
+
+	if ( !$img ) {
+		wfThumbError( 404, wfMsg( 'badtitletext' ) );
+		return;
+	}
+	if ( !$img->exists() ) {
+		wfThumbError( 404, 'The source file for the specified thumbnail does not exist.' );
+		return;
+	}
+	$sourcePath = $img->getPath();
+	if ( $sourcePath === false ) {
+		wfThumbError( 500, 'The source file is not locally accessible.' );
+		return;
+	}
+
+	// Check IMS against the source file
+	// This means that clients can keep a cached copy even after it has been deleted on the server
+	if ( !empty( $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) ) {
+		// Fix IE brokenness
+		$imsString = preg_replace( '/;.*$/', '', $_SERVER["HTTP_IF_MODIFIED_SINCE"] );
+		// Calculate time
+		wfSuppressWarnings();
+		$imsUnix = strtotime( $imsString );
+		$stat = stat( $sourcePath );
+		wfRestoreWarnings();
+		if ( $stat['mtime'] <= $imsUnix ) {
+			header( 'HTTP/1.1 304 Not Modified' );
+			return;
+		}
+	}
+
+	// Stream the file if it exists already
+	try {
+		if ( false != ( $thumbName = $img->thumbName( $params ) ) ) {
+			$thumbPath = $img->getThumbPath( $thumbName );
+
+			if ( is_file( $thumbPath ) ) {
+				wfStreamFile( $thumbPath, $headers );
+				return;
+			}
+		}
+	} catch ( MWException $e ) {
+		wfThumbError( 500, $e->getHTML() );
+		return;
+	}
+
+	try {
+		$thumb = $img->transform( $params, File::RENDER_NOW );
+	} catch( Exception $ex ) {
+		// Tried to select a page on a non-paged file?
+		$thumb = false;
+	}
+
+	$errorMsg = false;
+	if ( !$thumb ) {
+		$errorMsg = wfMsgHtml( 'thumbnail_error', 'File::transform() returned false' );
+	} elseif ( $thumb->isError() ) {
+		$errorMsg = $thumb->getHtmlMsg();
+	} elseif ( !$thumb->getPath() ) {
+		$errorMsg = wfMsgHtml( 'thumbnail_error', 'No path supplied in thumbnail object' );
+	} elseif ( $thumb->getPath() == $img->getPath() ) {
+		$errorMsg = wfMsgHtml( 'thumbnail_error', 'Image was not scaled, ' .
+			'is the requested width bigger than the source?' );
+	} else {
+		wfStreamFile( $thumb->getPath(), $headers );
+	}
+	if ( $errorMsg !== false ) {
+		wfThumbError( 500, $errorMsg );
+	}
+
+	wfProfileOut( __METHOD__ );
 }
 
-$pre_render= isset($_REQUEST['r']) && $_REQUEST['r']!="0";
+function wfThumbError( $status, $msg ) {
+	global $wgShowHostnames;
+	header( 'Cache-Control: no-cache' );
+	header( 'Content-Type: text/html; charset=utf-8' );
+	if ( $status == 404 ) {
+		header( 'HTTP/1.1 404 Not found' );
+	} elseif ( $status == 403 ) {
+		header( 'HTTP/1.1 403 Forbidden' );
+		header( 'Vary: Cookie' );
+	} else {
+		header( 'HTTP/1.1 500 Internal server error' );
+	}
+	if( $wgShowHostnames ) {
+		$url = htmlspecialchars( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
+		$hostname = htmlspecialchars( wfHostname() );
+		$debug = "<!-- $url -->\n<!-- $hostname -->\n";
+	} else {
+		$debug = "";
+	}
+	echo <<<EOT
+<html><head><title>Error generating thumbnail</title></head>
+<body>
+<h1>Error generating thumbnail</h1>
+<p>
+$msg
+</p>
+$debug
+</body>
+</html>
 
-// Some basic input validation
-
-$width = intval( $width );
-$fileName = strtr( $fileName, '\\/', '__' );
-
-// Work out paths, carefully avoiding constructing an Image object because that won't work yet
-
-$imagePath = wfImageDir( $fileName ) . '/' . $fileName;
-$thumbName = "{$width}px-$fileName";
-if ( $pre_render ) {
-	$thumbName .= '.png';
-}
-$thumbPath = wfImageThumbDir( $fileName ) . '/' . $thumbName;
-
-if ( is_file( $thumbPath ) && filemtime( $thumbPath ) >= filemtime( $imagePath ) ) {
-	wfStreamFile( $thumbPath );
-	exit;
-}
-
-// OK, no valid thumbnail, time to get out the heavy machinery
-require_once( 'Setup.php' );
-wfProfileIn( 'thumb.php' );
-
-$img = Image::newFromName( $fileName );
-if ( $img ) {
-	$thumb = $img->renderThumb( $width, false );
-} else {
-	$thumb = false;
-}
-
-if ( $thumb && $thumb->path ) {
-	wfStreamFile( $thumb->path );
-} else {
-	$badtitle = wfMsg( 'badtitle' );
-	$badtitletext = wfMsg( 'badtitletext' );
-	echo "<html><head>
-	<title>$badtitle</title>
-	<body>
-<h1>$badtitle</h1>
-<p>$badtitletext</p>
-</body></html>";
+EOT;
 }
 
-wfProfileOut( 'thumb.php' );
-
-
-?>

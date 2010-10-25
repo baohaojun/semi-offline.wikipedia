@@ -1,29 +1,29 @@
 <?php
-# Copyright (C) 2004 Brion Vibber <brion@pobox.com>
-# http://www.mediawiki.org/
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-# http://www.gnu.org/copyleft/gpl.html
-
 /**
  * Test feeds random 16-byte strings to both the pure PHP and ICU-based
  * UtfNormal::cleanUp() code paths, and checks to see if there's a
  * difference. Will run forever until it finds one or you kill it.
  *
- * @package UtfNormal
- * @access private
+ * Copyright (C) 2004 Brion Vibber <brion@pobox.com>
+ * http://www.mediawiki.org/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * http://www.gnu.org/copyleft/gpl.html
+ *
+ * @file
+ * @ingroup UtfNormal
  */
 
 if( php_sapi_name() != 'cli' ) {
@@ -32,7 +32,7 @@ if( php_sapi_name() != 'cli' ) {
 
 /** */
 require_once( 'UtfNormal.php' );
-require_once( '../DifferenceEngine.php' );
+require_once( '../diff/DifferenceEngine.php' );
 
 dl('php_utfnormal.so' );
 
@@ -65,10 +65,11 @@ function showDiffs( $a, $b ) {
 	$ota = explode( "\n", str_replace( "\r\n", "\n", $a ) );
 	$nta = explode( "\n", str_replace( "\r\n", "\n", $b ) );
 
-	$diffs =& new Diff( $ota, $nta );
-	$formatter =& new TableDiffFormatter();
+	$diffs = new Diff( $ota, $nta );
+	$formatter = new TableDiffFormatter();
 	$funky = $formatter->format( $diffs );
-	preg_match_all( '/<span class="diffchange">(.*?)<\/span>/', $funky, $matches );
+	$matches = array();
+	preg_match_all( '/<(?:ins|del) class="diffchange">(.*?)<\/(?:ins|del)>/', $funky, $matches );
 	foreach( $matches[1] as $bit ) {
 		$hex = bin2hex( $bit );
 		echo "\t$hex\n";
@@ -103,5 +104,3 @@ while( true ) {
 	$clean = '';
 	$norm = '';
 }
-
-?>
