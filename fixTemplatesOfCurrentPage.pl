@@ -63,9 +63,7 @@ for my $template (keys %templates) {
 		    open DATA, "tail -n +2 /var/tmp/result |";
 		    open TEMPLATE, ">./mediawiki_sa/templates/$md5s.mwt";   
 		    while(<DATA>) {
-                        print "before print\n";
 			print TEMPLATE LooseEntities($_);
-                        print "after print\n";
 		    }
 		    close DATA;
 		    close TEMPLATE;
