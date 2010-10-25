@@ -15,25 +15,26 @@ sub LooseEntities {
 my %templates;
 open RES, "/var/tmp/result.html" || die "No page currently rendered\n";
 while(<RES>) {
-    if (/"\/(article\/Template:[^"]*?)(?:\/&amp;redlink=1)?".*title="Template:([^"]*?)(?: .page does not exist.)?"/) {
+    if (/"\/(article\/Template:[^"]*?)(?:\/&amp;redlink=1)?".*?title="Template:([^"]*?)(?: .page does not exist.)?"/) {
         print "template{$2} is $1\n";
 	$templates{$2}=$1;
     }
 }
 close RES;
 for my $template (keys %templates) {
-    print "Fixing $template...\n";
+    print "Fixing $template... ";
     if ($template =~ m/^Pp-/i) {
 	print "Not allowed\n";
 	next;
     }
 
     my $md5s = Digest::MD5::md5_hex(lc($template));
+    print "in $md5s\n";
     if ( ! -e "./mediawiki_sa/templates/$md5s.mwt") {
 	#system("wget -O /var/tmp/fixup.html http://localhost:8000/article/Template:".$template."/");
 	my $url = $templates{$template};
         $url =~ s,/*$,/,;
-        print "wget -O /var/tmp/fixup.html http://localhost:8000/$url >/dev/null 2>&1\n";
+        #print "wget -O /var/tmp/fixup.html http://localhost:8000/$url >/dev/null 2>&1\n";
 	system("wget -O /var/tmp/fixup.html http://localhost:8000/$url >/dev/null 2>&1");
 	if ($? == -1) {
         }

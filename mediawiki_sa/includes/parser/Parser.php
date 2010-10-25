@@ -3357,6 +3357,7 @@ class Parser {
                   }
                
                   if (file_exists("templates/" . md5("$tmpltext") . ".mwt")) {
+                    wfDebugLog('bhj', __FUNCTION__ . " " .  $tmpltext . " " . $title->getText() . " hello bhj\n"); 
                     return array('text' =>  file_get_contents("templates/" . md5("$tmpltext") . ".mwt"),
                                  'finalTitle' => $finalTitle,
                                  'deps' => $deps );
