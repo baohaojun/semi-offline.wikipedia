@@ -367,7 +367,6 @@ $wgAutoloadLocalClasses = array(
 	'DatabaseMysql' => 'includes/db/DatabaseMysql.php',
 	'DatabaseOracle' => 'includes/db/DatabaseOracle.php',
 	'DatabasePostgres' => 'includes/db/DatabasePostgres.php',
-	'DatabaseNull' => 'includes/db/DatabaseNull.php',
 	'DatabaseSqlite' => 'includes/db/DatabaseSqlite.php',
 	'DatabaseSqliteStandalone' => 'includes/db/DatabaseSqlite.php',
 	'DatabaseType' => 'includes/db/Database.php',

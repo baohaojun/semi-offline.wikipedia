@@ -44,7 +44,7 @@ $wgAllowCiteGroups = true;
 $wgCiteCacheReferences = false;
 
 function wfCite() {
-	$GLOBALS['hackCiteObj'] = new Cite;
+	new Cite;
 	return true;
 }
 

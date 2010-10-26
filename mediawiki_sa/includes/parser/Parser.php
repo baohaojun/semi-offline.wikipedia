@@ -3347,23 +3347,6 @@ class Parser {
 
 		# Loop to fetch the article, with up to 1 redirect
 		for ( $i = 0; $i < 2 && is_object( $title ); $i++ ) {
-
-
-                  $tmpltext = strtolower($title->getText());
-                  if (file_exists("stdtemplates/template.$tmpltext")) {
-                    return array('text' =>  file_get_contents("templates/" . md5("$tmpltext") . ".mwt"),
-                                 'finalTitle' => $finalTitle,
-                                 'deps' => $deps );
-                  }
-               
-                  if (file_exists("templates/" . md5("$tmpltext") . ".mwt")) {
-                    wfDebugLog('bhj', __FUNCTION__ . " " .  $tmpltext . " " . $title->getText() . " hello bhj\n"); 
-                    return array('text' =>  file_get_contents("templates/" . md5("$tmpltext") . ".mwt"),
-                                 'finalTitle' => $finalTitle,
-                                 'deps' => $deps );
-                  }
-                 
-
 			# Give extensions a chance to select the revision instead
 			$id = false; # Assume current
 			wfRunHooks( 'BeforeParserFetchTemplateAndtitle', array( $parser, &$title, &$skip, &$id ) );
