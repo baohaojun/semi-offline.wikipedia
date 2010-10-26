@@ -3350,18 +3350,26 @@ class Parser {
 
 
                   $tmpltext = strtolower($title->getText());
-                  if (file_exists("stdtemplates/template.$tmpltext")) {
-                    return array('text' =>  file_get_contents("templates/" . md5("$tmpltext") . ".mwt"),
-                                 'finalTitle' => $finalTitle,
-                                 'deps' => $deps );
-                  }
-               
-                  if (file_exists("templates/" . md5("$tmpltext") . ".mwt")) {
+                  $md5s = md5("$tmpltext");
+                  $md5s_d = substr($md5s, 0, 2);
+                  $md5s_f = substr($md5s, 2);
+                  $md5s_p = "templates/$md5s_d/$md5s_f.mwt";
+                  if (file_exists($md5s_p)) {
                     wfDebugLog('bhj', __FUNCTION__ . " " .  $tmpltext . " " . $title->getText() . " hello bhj\n"); 
-                    return array('text' =>  file_get_contents("templates/" . md5("$tmpltext") . ".mwt"),
+                    return array('text' =>  file_get_contents($md5s_p),
                                  'finalTitle' => $finalTitle,
                                  'deps' => $deps );
+                  } else {
+                    system("wiki-get-template " . escapeshellarg($title->getText()));
+                    if (file_exists($md5s_p)) {
+                      wfDebugLog('bhj', __FUNCTION__ . " " .  $tmpltext . " " . $title->getText() . " hello bhj, we built the template!\n"); 
+                      return array('text' =>  file_get_contents($md5s_p),
+                                   'finalTitle' => $finalTitle,
+                                   'deps' => $deps );
+                    }
                   }
+                    
+
                  
 
 			# Give extensions a chance to select the revision instead
