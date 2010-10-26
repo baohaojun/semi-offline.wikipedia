@@ -3349,7 +3349,7 @@ class Parser {
 		for ( $i = 0; $i < 2 && is_object( $title ); $i++ ) {
 
 
-                  $tmpltext = strtolower($title->getText());
+                  $tmpltext = $title->getText();
                   $md5s = md5("$tmpltext");
                   $md5s_d = substr($md5s, 0, 2);
                   $md5s_f = substr($md5s, 2);
