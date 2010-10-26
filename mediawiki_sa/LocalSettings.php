@@ -132,14 +132,14 @@ $wgUseTidy = true;
 $wgTidyBin = '/usr/bin/tidy';   
 $wgTidyConf = $IP.'/extensions/tidy/tidy.conf';
 
-/* $wgForeignFileRepos[] = array( */
-/*    'class'                   => 'ForeignAPIRepo', */
-/*    'name'                    => 'shared', */
-/*    'apibase'                 => 'http://commons.wikimedia.org/w/api.php', */
-/*    'fetchDescription'        => true, // Optional */
-/*    'descriptionCacheExpiry'  => 43200, // 12 hours, optional (values are seconds) */
-/*    'apiThumbCacheExpiry'     => 43200, // 12 hours, optional, but required for local thumb caching */
-/* ); */
+$wgForeignFileRepos[] = array(
+   'class'                   => 'ForeignAPIRepo',
+   'name'                    => 'shared',
+   'apibase'                 => 'http://commons.wikimedia.org/w/api.php',
+   'fetchDescription'        => true, // Optional
+   'descriptionCacheExpiry'  => 0,
+   'apiThumbCacheExpiry'     => 0,
+);
 
 $wgUseFileCache = true; /* default: false */
 $wgFileCacheDirectory = "$IP/cache";

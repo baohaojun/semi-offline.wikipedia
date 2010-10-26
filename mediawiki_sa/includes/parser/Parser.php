@@ -3355,14 +3355,14 @@ class Parser {
                   $md5s_f = substr($md5s, 2);
                   $md5s_p = "templates/$md5s_d/$md5s_f.mwt";
                   if (file_exists($md5s_p)) {
-                    wfDebugLog('bhj', __FUNCTION__ . " " .  $tmpltext . " " . $title->getText() . " hello bhj\n"); 
+                    // wfDebugLog('bhj', __FUNCTION__ . " " .  $tmpltext . " " . $title->getText() . " hello bhj\n"); 
                     return array('text' =>  file_get_contents($md5s_p),
                                  'finalTitle' => $finalTitle,
                                  'deps' => $deps );
                   } else {
                     system("wiki-get-template " . escapeshellarg($title->getText()));
                     if (file_exists($md5s_p)) {
-                      wfDebugLog('bhj', __FUNCTION__ . " " .  $tmpltext . " " . $title->getText() . " hello bhj, we built the template!\n"); 
+                      // wfDebugLog('bhj', __FUNCTION__ . " " .  $tmpltext . " " . $title->getText() . " hello bhj, we built the template!\n"); 
                       return array('text' =>  file_get_contents($md5s_p),
                                    'finalTitle' => $finalTitle,
                                    'deps' => $deps );
