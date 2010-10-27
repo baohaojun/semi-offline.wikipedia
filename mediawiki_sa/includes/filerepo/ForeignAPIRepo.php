@@ -140,7 +140,7 @@ class ForeignAPIRepo extends FileRepo {
             return null;
           }
           wfMkdirParents("images_cache/$md5s_d/");
-          if ( !file_put_contents($md5s_p, $data) || !file_put_contents($md5s_p . "info", $url)) {
+          if ( !file_put_contents($md5s_p, $data) || !file_put_contents($md5s_p . ".info", $url)) {
             wfDebugLog('bhj', __FUNCTION__ . " hello bhj can not put image query data\n");
           }
           return FormatJson::decode( $data, true );
@@ -196,7 +196,18 @@ class ForeignAPIRepo extends FileRepo {
 		global $wgMemc, $wgUploadPath, $wgServer, $wgUploadDirectory;
 
 		if ( 1 ) {
-                  return $this->getThumbUrl( $name, $width, $height );
+                  $url = $this->getThumbUrl( $name, $width, $height );
+                  $md5s = md5($url);
+                  $md5s_d = substr($md5s, 0, 2);
+                  $md5s_f = substr($md5s, 2);
+                  $ext = strrchr($url, '.');
+                  $md5s_p = "images/thumb/$md5s_d/$md5s_f$ext";
+
+                  if (file_exists($md5s_p)) {
+                    return "http://localhost:8000/scripts/$md5s_p";
+                  }
+                  system("wiki-cache-image-thumb " . escapeshellarg($url) . " " . escapeshellarg($md5s_p) . "&"); // put it background
+                  return $url;
 		}
 
 		$key = $this->getLocalCacheKey( 'ForeignAPIRepo', 'ThumbUrl', $name );

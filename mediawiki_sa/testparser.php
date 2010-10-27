@@ -128,8 +128,7 @@ $out = $text;
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html class="linux firefox firefox3 gecko gecko1" dir="ltr" xmlns="http://www.w3.org/1999/xhtml" lang="en"><head>
 
-
-<title>Mathematics - Wikipedia, the free encyclopedia</title>
+<?php echo "<title>" . htmlspecialchars($articletitle) . " - Semi-Offline Wikipedia, the free encyclopedia</title>"; ?>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta http-equiv="Content-Style-Type" content="text/css">
 <meta name="generator" content="MediaWiki 1.16wmf4">
