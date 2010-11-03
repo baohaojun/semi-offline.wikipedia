@@ -1,4 +1,9 @@
-XMLBZ2 = enwiki-20070802-pages-articles.xml.bz2 
+XMLBZ2 ?= $(shell readlink -f ./test/test.xml.bz2)
+IDX := $(patsubst %.xml.bz2,%.idx,${XMLBZ2})
+IDXDB := $(patsubst %.xml.bz2,%.db,${XMLBZ2})
+ifeq (${XMLBZ2}, ${IDX})
+$(error wikipeida xml.bz2 dump file must end with extension ".xml.bz2")
+endif
 
 
 .PHONY:	inform wikipedia
@@ -6,22 +11,36 @@ XMLBZ2 = enwiki-20070802-pages-articles.xml.bz2
 all:	inform
 
 inform:
-	@echo Make sure you have Python, Perl, PHP5 and Xapian and Django installed
-	@echo after that, put ${XMLBZ2} in the wiki-splits directory and \'make wikipedia\'
+	@echo Make sure you have Python, Perl, PHP5, Xapian, Django installed
+	@echo Also make sure you have cpan String::ShellQuote perl module
+	@echo after that, run \'make wikipedia XMLBZ2="Path to your wikipedia dump download file"\' 
+	@echo you can get the dump file with the following:
+	@echo wget http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
+	@echo if you do not specify the xmlbz2, then a testing file will be used, which contains only 1 article
+	@echo and you must point your browser to \'http://localhost:8000/article/Andalusia\'
+	@echo and also expect a unsatisfactory rendering of the page, since all templates are not parsed
 
-wikipedia: quickstartindex quickstartsearch index
+wikipedia: idxdb
 
-quickstartindex: quickstartindex.cc
-	@g++ -o $@ $^ -lxapian
+XMLBZ2: 
+	@echo
+	@bash -c 'if test -e "${XMLBZ2}; then exit 0; fi; \
+		read -p "Oops, seems you do not have ${XMLBZ2}, do you want to download it (warning: take a lot of time, go to sleep!) y/N: " ans;\
+		if test "$$ans" != Y -a "$$ans" != y; then echo stop.; false; fi'
+	@wget http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2 -O ${XMLBZ2}
 
-quickstartsearch: quickstartsearch.cc
-	@g++ -o $@ $^ -lxapian
+IDX: ${IDX}
+${IDX}: ${XMLBZ2}
+	cd ./bz2-src/ && make
+	./mparser.py ${XMLBZ2} > ${IDX}.2
+	export LC_ALL=C && sort -k 10 ${IDX}.2 > $@
+	rm ${IDX}.2
 
-index: quickstartindex
-	@mkdir -p ~/wikipedia/db
-	@rm -f db
-	@ln -s ~/wikipedia/db . 
-	@cat ~/wikipedia/enwiki-latest-pages-articles.idx|./quickstartindex
+
+idxdb:${IDXDB}
+	@echo 'xmlbz2 = "${XMLBZ2}"' > ./where_is_xmlbz2.py
+${IDXDB}: ${IDX}
+	@mkdir ./mediawiki_sa/templates/ ./mediawiki_sa/images_cache -p
 	@echo Index built - we are done
 	@echo To run your local wikipedia, just
 	@echo

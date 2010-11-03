@@ -11,15 +11,18 @@ sub LooseEntities {
     return $_;
 }
 
+chomp(my $mypath = `readlink -f $0`);
+chomp(my $mydir = `dirname $mypath`);
+
 sub ShowTopic {
     my $foundLine = shift;
-    open (my $pipe, "-|", "python", "/home/bhj/windows-config/gcode/wikipediaDumpReader-0.2.10/get_article.py", @_);
+    open (my $pipe, "-|", "python", "$mydir/get_article.py", @_);
     open RESULT, ">/var/tmp/result";
     while(<$pipe>) {
         print RESULT $_;
     }
 
-    system("cd ../mediawiki_sa/ && php5 testparser.php /var/tmp/result > /var/tmp/result.tmp");
+    system("cd $mydir/mediawiki_sa/ && php5 testparser.php /var/tmp/result > /var/tmp/result.tmp");
     if (($? == -1) || ($? & 127) || ($? >> 8)) {
 	print "#### mediawiki_sa parser failed! report to woc.fslab.de ####\n";
 	open FALLBACK, ">/var/tmp/result.tmp";
