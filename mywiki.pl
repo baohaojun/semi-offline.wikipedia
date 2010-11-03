@@ -57,7 +57,7 @@ sub ShowTopic {
 die "Usage: $0 keyword1 <keyword2> ...\n"
     unless @ARGV >= 1;
 
-my $cmd = "./quickstartsearch db/ ";
+my $cmd = "wiki-sorted-idx-title-query ";
 while (@ARGV) {
     $cmd .= '"'.lc($ARGV[0]).'" ';
     shift;
