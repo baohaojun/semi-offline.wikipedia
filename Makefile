@@ -20,7 +20,7 @@ inform:
 	@echo and you must point your browser to \'http://localhost:8000/article/Andalusia\'
 	@echo and also expect a unsatisfactory rendering of the page, since all templates are not parsed
 
-wikipedia: idxdb
+wikipedia: ${IDXDB}
 
 XMLBZ2: 
 	@echo
@@ -37,7 +37,7 @@ ${IDX}: ${XMLBZ2}
 	rm ${IDX}.2
 
 
-idxdb:${IDXDB}
+idxdb:
 	@echo 'xmlbz2 = "${XMLBZ2}"' > ./where_is_xmlbz2.py
 ${IDXDB}: ${IDX}
 	@mkdir ./mediawiki_sa/templates/ ./mediawiki_sa/images_cache -p
