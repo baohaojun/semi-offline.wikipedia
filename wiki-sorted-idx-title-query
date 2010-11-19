@@ -11,6 +11,8 @@ chomp(my $file_info = <$where>);
 close $where;
 $file_info =~ s/.*?"//;
 $file_info =~ s/.xml.bz2"$/.idx/;
+my $file_pn = $file_info;
+substr($file_pn, -4) = ".pn";
 
 open(my $file, "<", $file_info) 
     or die "Error opening sorted wiki index";
@@ -27,7 +29,16 @@ our $level = 0;
 sub bisect($$$){
     my ($file, $min, $max) = @_;
     our $regexp, $target, $reg_capture, $level;
-    die "Error, too many level of recursion" if ($level++ > 50);
+    if ($level++ > 50) {
+        die "Error, will cause too many system process and crash!" if @ARGV;
+        open(my $grep, "-|", "grep", "-i", "--", $target, $file_pn);
+        while(<$grep>) {
+            chomp;
+            system($mypath, $_, "arg2, make it exit if there're errors");
+        }
+        die "Error, too many level of recursion";
+    }
+
 
     if ($min >= $max - 2048) {
         seek($file, $min, 0);
