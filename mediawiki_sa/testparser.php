@@ -112,7 +112,7 @@ $wgMessageCache->addMessage( 'pfunc_time_too_long', "Error: too many #time calls
 $wgMessageCache->addMessage( 'pfunc_rel2abs_invalid_depth', "Error: Invalid depth in path: \"$1\" (tried to access a node above the root node)" );
 
 
-$title = new Title();
+$title = Title::newFromText($articletitle);
 $options = new ParserOptions(null); // 1st arg: $user
 $options->setEditSection(false);
 require('skins/Simple.php');
