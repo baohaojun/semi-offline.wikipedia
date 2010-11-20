@@ -1,5 +1,5 @@
 from django.http import *
-import os, re, urllib
+import os, re, urllib, subprocess
 
 def index(request):
     return article(request, "Wikipedia")
@@ -13,26 +13,17 @@ def article(request, article):
     result = "Not found"
     print "Searching for exact article", article
     print "wiki-sorted-idx-title-query \"%s\"" % article.replace('_', ' ')
-    for line in os.popen("wiki-sorted-idx-title-query \"%s\"" % article.replace('_', ' ')):
+    for line in subprocess.Popen(("wiki-sorted-idx-title-query", article.replace('_', ' ')), stdout=subprocess.PIPE).communicate()[0].split('\n'):
         print line,
         res = re.match(r'^(\d+%)\s\[([^\t]+)\t' + r'(0x[0-9A-Fa-f]+)\s+' * 9 + r'\]$', line)
         if res != None and res.group(2) == article.replace('_', ' '):
-            cmd = """./show.pl "%s" %s %s %s %s %s %s %s %s %s""" % (
-            res.group(2),
-            res.group(3), 
-            res.group(4),
-            res.group(5),
-            res.group(6),
-            res.group(7),
-            res.group(8),
-            res.group(9),
-            res.group(10),
-            res.group(11),                                                                
-            )
+            cmd = ["./show.pl"]
+            for i in range(2, 12):
+                cmd.append(res.group(i))
+            
             print cmd
-            os.system(cmd)
+            subprocess.Popen(cmd).communicate()
             result = open("/var/tmp/result.html").read() 
-            print "Gotcha"
             break
     else:
         return search(request, article)
@@ -42,7 +33,7 @@ def search(request, article):
     print "Searching for article", article
     lines = []
     print "wiki-sorted-idx-title-query \"%s\"" % article.replace('_', ' ')
-    for line in os.popen("wiki-sorted-idx-title-query \"%s\"" % article.replace('_', ' ')):
+    for line in subprocess.Popen(("wiki-sorted-idx-title-query", article.replace('_', ' ')), stdout=subprocess.PIPE).communicate()[0].split('\n'):
         print line,
         lines.append(line[:])
     if len(lines) == 0:
@@ -58,18 +49,18 @@ def search(request, article):
             if res != None:
                 result += "(%s) <A HREF=\"/article/%s\">%s</A><br/>\n" % (res.group(1), res.group(2), res.group(2))
             else:
-                print "please check you regexp"
+                print "please check your regexp"
         result += "</body></html>"
     return HttpResponse(result)
 
 def keyword(request, article):
     print "Searching for keywords of article", article
     lines = []
-    cmd = "wiki-sorted-idx-title-query "
+    cmd = ["wiki-sorted-idx-title-query"]
     for i in article.replace('_', ' ').split():
-        cmd += '"%s" ' % i
+        cmd.append(i)
     print cmd
-    for line in os.popen(cmd):
+    for line in subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].split('\n'):
         print line,
         lines.append(line[:])
     if len(lines) == 0:

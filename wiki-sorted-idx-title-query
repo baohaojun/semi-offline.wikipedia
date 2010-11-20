@@ -2,6 +2,12 @@
 
 use strict;
 use utf8;
+use Encode;
+use Digest::MD5;
+
+# for (@ARGV) {
+#     print STDERR "arg '$_' " . Digest::MD5::md5_hex($_) . "\n";
+# }
 
 chomp(my $mypath = `readlink -f $0`);
 chomp(my $mydir = `dirname $mypath`);
@@ -21,6 +27,7 @@ seek($file, 0, 2);
 my $max = tell($file);
 my $stem = "0x[0-9A-Fa-f]*? " x 9;
 our $target = shift @ARGV or die "Error: must supply an argument!";
+
 
 our $regexp = qr/^$stem\Q$target\E$/m;
 our $reg_remap = qr/^($stem)(\Q$target\E)$/m;
@@ -55,7 +62,7 @@ sub bisect($$$){
         $middle -= 2048;
     }
 
-    #print "min is $min, max is $max, middle is $middle\n";
+    #print STDERR "min is $min, max is $max, middle is $middle\n";
     seek($file, $middle, 0);
     read($file, my $line, 4096);
     if ($line =~ $regexp) {
@@ -78,3 +85,4 @@ my $res = bisect($file, 0, $max);
 die "Error: $res not match pattern" unless $res =~ $regexp;
 $res =~ s/$reg_remap/100% [$2\t$1]/;
 print "$res\n";
+#print STDERR "found $res\n";
