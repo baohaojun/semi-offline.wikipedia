@@ -37,15 +37,8 @@ sub bisect($$$){
     my ($file, $min, $max) = @_;
     our $regexp, $target, $reg_capture, $level;
     if ($level++ > 50) {
-        die "Error, will cause too many system process and crash!" if @ARGV;
-        open(my $grep, "-|", "grep", "-i", "--", $target, $file_pn);
-        while(<$grep>) {
-            chomp;
-            system($mypath, $_, "arg2, make it exit if there're errors");
-        }
-        die "Error, too many level of recursion";
+        die "Error, '$target' caused too many level of recursion";
     }
-
 
     if ($min >= $max - 2048) {
         seek($file, $min, 0);

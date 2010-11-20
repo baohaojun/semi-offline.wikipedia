@@ -32,10 +32,12 @@ def article(request, article):
 def search(request, article):
     print "Searching for article", article
     lines = []
-    print "wiki-sorted-idx-title-query \"%s\"" % article.replace('_', ' ')
-    for line in subprocess.Popen(("wiki-sorted-idx-title-query", article.replace('_', ' ')), stdout=subprocess.PIPE).communicate()[0].split('\n'):
-        print line,
-        lines.append(line[:])
+    cmd = ['wiki-query-keywords']
+    cmd.extend(article.replace('_', ' ').split())
+    print cmd
+    for line in subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].split('\n'):
+        if line:
+            lines.append(line[:]) 
     if len(lines) == 0:
         result = '<html><head><title>Wikipedia has nothing about this.</title>'
         result += '</head><body>Wikipedia has nothing about this.<br/>'
@@ -47,7 +49,8 @@ def search(request, article):
             print "line is ", line
             res = re.match(r'^(\d+%)\s\[([^\t]+)\t' + r'(0x[0-9A-Fa-f]+)\s+' * 9 + r'\]$', line)
             if res != None:
-                result += "(%s) <A HREF=\"/article/%s\">%s</A><br/>\n" % (res.group(1), res.group(2), res.group(2))
+                result += "(%s) <A HREF=\"/article/%s\">%s</A><br/>\n" % (res.group(1), urllib.quote(res.group(2)), res.group(2))
+                print "regexp is matched ok:"
             else:
                 print "please check your regexp"
         result += "</body></html>"
@@ -56,7 +59,7 @@ def search(request, article):
 def keyword(request, article):
     print "Searching for keywords of article", article
     lines = []
-    cmd = ["wiki-sorted-idx-title-query"]
+    cmd = ["wiki-query-keywords"]
     for i in article.replace('_', ' ').split():
         cmd.append(i)
     print cmd

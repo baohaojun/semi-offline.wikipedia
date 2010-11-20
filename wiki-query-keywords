@@ -1,0 +1,55 @@
+#!/usr/bin/env perl
+
+# we will require that each ARG must appear in the wiki title, the
+# first one is special, we will use it for beagle-grep
+
+use strict;
+use utf8;
+use Encode;
+use Digest::MD5;
+
+# for (@ARGV) {
+#     print STDERR "arg '$_' " . Digest::MD5::md5_hex($_) . "\n";
+# }
+
+chomp(my $mypath = `readlink -f $0`);
+chomp(my $mydir = `dirname $mypath`);
+
+open(my $where, "<", "$mydir/where_is_xmlbz2.py") or die "Error openning where-file at $mydir/where_is_xmlbz2.py";
+chomp(my $file_info = <$where>);
+close $where;
+$file_info =~ s/.*?"//;
+$file_info =~ s/.xml.bz2"$/.idx/;
+my $beagle_dir = $file_info;
+$beagle_dir =~ s,(.*)/.*,$1/for-beagle,;
+
+chdir $beagle_dir or die "Error: cant chdir $beagle_dir";
+
+my $arg = shift @ARGV or die "Error: at least one argument is needed";
+
+open(my $file, "-|", "beagle-grep.sh", "-e", $arg, "-i") or die "Error: failed beagle-grep.sh";
+
+my @args;
+for (@ARGV) {
+    @args = (@args, lc $_);
+}
+
+while(<$file>) {
+    my $found = 1;
+    next unless m/:.*?:(.*)$/;
+    my $line = $1;
+    my $lc_line = lc $1;
+    for my $arg (@args) {
+        if (index($lc_line, lc $arg) == -1) {
+            $found = 0;
+            last;
+        }
+    }
+
+    if ($found) {
+        system('wiki-sorted-idx-title-query', $line);
+    }
+}
+
+
+
