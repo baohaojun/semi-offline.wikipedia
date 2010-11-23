@@ -26,6 +26,7 @@ sub get_template_info($) {
 sub get_template($);
 sub get_template($) {
   my $template = shift @_;
+  # print STDERR "we are asked to find template for $template\n";
   my ($sq_template, $md5s, $md5s_d, $md5s_f, $mwt) = get_template_info($template);
 
   print STDERR "build $template into $mwt\n";
@@ -43,17 +44,20 @@ sub get_template($) {
     while (<$TEMPLATE>) {
       $line ++;
       if ($line == 1 and $_ =~ m/^\s*$/) {
-          while (<$TEMPLATE>) {
-              last unless m/^\s*$/;
-          }
+        while (<$TEMPLATE>) {
+          last unless m/^\s*$/;
+        }
       }
       if ($line == 1 and $_ =~ m/^\s*#REDIRECT\s*\[\[Template:(.*)\]\]/i) {
+        # print STDERR "oh, I see $mwt redirect to $1\n";
         my $template_redirect = $1;
         $template_redirect =~ s/^template:/Template:/;
         my $mwt_redirect = get_template($template_redirect);
-        system("ln", "-sf", shell_quote($mwt_redirect), shell_quote($mwt));
+        system("ln", "-sf", $mwt_redirect, $mwt);
         close $TEMPLATE;
         last;
+      } else {
+        # print STDERR "oh, $template is not redirected\n" if $line == 1;
       }
     }
   }
