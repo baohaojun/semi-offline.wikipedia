@@ -11,12 +11,13 @@ try:
 except ImportError:
 	import mod64.bz2 as bz2
 import random
+import where_is_xmlbz2
 
 def die(arg):
     print arg
     sys.exit(-1)
 
-f = bz2.BZ2File("/home/bhj/wikipedia/enwiki-latest-pages-articles.xml.bz2")
+f = bz2.BZ2File(where_is_xmlbz2.xmlbz2)
 prev_block_num, prev_block_byte, prev_block_bit, next_block_num, next_block_byte, next_block_bit, block, start, len_ = map(lambda(x): int(x, 0), sys.argv[1:])
 
 if (start < 0):
