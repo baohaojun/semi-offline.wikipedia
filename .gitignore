@@ -3,5 +3,4 @@ mediawiki_sa/msg_cache
 quickstartindex
 quickstartsearch
 *.so
-where_is_xmlbz2.py
 test/test.idx

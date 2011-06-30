@@ -13,10 +13,11 @@ sub LooseEntities {
 
 chomp(my $mypath = `readlink -f $0`);
 chomp(my $mydir = `dirname $mypath`);
+our $lang = shift @ARGV or die "Error: must supply lang!";
 
 sub ShowTopic {
     my $foundLine = shift;
-    open (my $pipe, "-|", "python", "$mydir/get_article.py", @_);
+    open (my $pipe, "-|", "python", "$mydir/get_article.py", $lang, @_);
     open RESULT, ">/var/tmp/result";
     while(<$pipe>) {
         print RESULT $_;

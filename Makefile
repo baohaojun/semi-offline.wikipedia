@@ -1,4 +1,5 @@
 XMLBZ2 ?= $(shell readlink -f ./test/test.xml.bz2)
+LANG ?= en
 IDX := $(patsubst %.xml.bz2,%.idx,${XMLBZ2})
 IDXDB := $(patsubst %.xml.bz2,%.db,${XMLBZ2})
 ifeq (${XMLBZ2}, ${IDX})
@@ -20,7 +21,7 @@ inform:
 	@echo and you must point your browser to \'http://localhost:8000/article/Andalusia\'
 	@echo and also expect a unsatisfactory rendering of the page, since all templates are not parsed
 
-wikipedia: ${IDXDB}
+wikipedia: ${IDXDB} idxdb
 
 XMLBZ2: 
 	@echo
@@ -38,7 +39,7 @@ ${IDX}: ${XMLBZ2}
 
 
 idxdb:
-	@echo 'xmlbz2 = "${XMLBZ2}"' > ./where_is_xmlbz2.py
+	@echo -n '${XMLBZ2}' > ./$(LANG).py
 ${IDXDB}: ${IDX}
 	@mkdir ./mediawiki_sa/templates/ ./mediawiki_sa/images_cache -p
 	@echo Index built - we are done

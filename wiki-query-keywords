@@ -14,14 +14,14 @@ use Digest::MD5;
 
 chomp(my $mypath = `readlink -f $0`);
 chomp(my $mydir = `dirname $mypath`);
+our $lang = shift @ARGV or die "Error: must supply lang!";
 
-open(my $where, "<", "$mydir/where_is_xmlbz2.py") or die "Error openning where-file at $mydir/where_is_xmlbz2.py";
+open(my $where, "<", "$mydir/$lang.py") or die "Error openning where-file at $mydir/$lang.py";
 chomp(my $file_info = <$where>);
 close $where;
 $file_info =~ s/.*?"//;
 $file_info =~ s/.xml.bz2"$/.idx/;
-my $beagle_dir = $file_info;
-$beagle_dir =~ s,(.*)/.*,$1/for-beagle,;
+my $beagle_dir = $file_info . ".beagle";
 
 chdir $beagle_dir or die "Error: cant chdir $beagle_dir";
 
@@ -47,7 +47,7 @@ while(<$file>) {
     }
 
     if ($found) {
-        system('wiki-sorted-idx-title-query', $line);
+        system('wiki-sorted-idx-title-query', $lang, $line);
     }
 }
 

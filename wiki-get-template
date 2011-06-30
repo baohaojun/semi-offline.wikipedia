@@ -3,11 +3,12 @@ use strict;
 use Digest::MD5;
 use String::ShellQuote;
 
-die "Usage: $0 TemplateName" if (scalar(@ARGV) != 1);
+die "Usage: $0 lang TemplateName" if (scalar(@ARGV) != 2);
 
 chomp(my $mypath = `readlink -f $0`);
 chomp(my $mydir = `dirname $mypath`);
 
+our $lang = shift @ARGV or die "Error: must supply lang!";
 my $template = shift @ARGV;
 
 sub get_template_info($) {
@@ -19,7 +20,7 @@ sub get_template_info($) {
            $md5s,
            $md5s_d,
            $md5s_f,
-           glob("$mydir/mediawiki_sa/templates/$md5s_d/$md5s_f.mwt"),
+           glob("$mydir/mediawiki_sa/templates/$lang/$md5s_d/$md5s_f.mwt"),
          );
 }
 
@@ -32,7 +33,7 @@ sub get_template($) {
   print STDERR "build $template into $mwt\n";
   if (! -e $mwt) {
     system("mkdir -p `dirname $mwt`; echo $sq_template > $mwt.info");
-    open(my $DATA, "$mydir/wiki-title-query Template:$sq_template | tail -n +2 |");
+    open(my $DATA, "$mydir/wiki-title-query $lang Template:$sq_template | tail -n +2 |");
     open(my $TEMPLATE, ">$mwt");
     while (<$DATA>) {
       print $TEMPLATE $_;

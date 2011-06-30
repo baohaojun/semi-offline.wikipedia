@@ -4,20 +4,18 @@ import os, re, urllib, subprocess
 def index(request):
     return article(request, "Wikipedia")
 
-def article(request, article):
+def article(request, lang, article):
     article = article.encode('utf-8')
     if article.endswith("/"):
         article = article[:-1]
     if article.endswith("/&redlink=1"):
         article = article[:-11]
     result = "Not found"
-    print "Searching for exact article", article
-    print "wiki-sorted-idx-title-query \"%s\"" % article.replace('_', ' ')
-    for line in subprocess.Popen(("wiki-sorted-idx-title-query", article.replace('_', ' ')), stdout=subprocess.PIPE).communicate()[0].split('\n'):
+    for line in subprocess.Popen(("wiki-sorted-idx-title-query", lang, article.replace('_', ' ')), stdout=subprocess.PIPE).communicate()[0].split('\n'):
         print line,
         res = re.match(r'^(\d+%)\s\[([^\t]+)\t' + r'(0x[0-9A-Fa-f]+)\s+' * 9 + r'\]$', line)
         if res != None and res.group(2) == article.replace('_', ' '):
-            cmd = ["./show.pl"]
+            cmd = ["./show.pl", lang]
             for i in range(2, 12):
                 cmd.append(res.group(i))
             
@@ -26,13 +24,13 @@ def article(request, article):
             result = open("/var/tmp/result.html").read() 
             break
     else:
-        return search(request, article)
+        return search(request, lang, article)
     return HttpResponse(result)
 
-def search(request, article):
+def search(request, lang, article):
     print "Searching for article", article
     lines = []
-    cmd = ['wiki-query-keywords']
+    cmd = ['wiki-query-keywords', lang]
     cmd.extend(article.replace('_', ' ').split())
     print cmd
     for line in subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].split('\n'):

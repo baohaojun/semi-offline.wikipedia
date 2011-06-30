@@ -3,7 +3,7 @@ set -e
 mypath=`readlink -f $0`
 mydir=`dirname $mypath`
 cd $mydir
-
+lang=$1
 ./wiki-sorted-idx-title-query "$@" > /tmp/ow.db.search.$$ || ( 
 # fix something like Template:commonscat-inline, 
 # it should be Template:Commonscat-inline
@@ -21,4 +21,4 @@ if test `cat /tmp/ow.db.search.$$|wc -l` != 1; then
     false
 fi
 
-./get_article.py $(cat /tmp/ow.db.search.$$|perl -npe 's/.*\[//; s/.*?\t//; s/\].*//')
+./get_article.py $lang $(cat /tmp/ow.db.search.$$|perl -npe 's/.*\[//; s/.*?\t//; s/\].*//')
