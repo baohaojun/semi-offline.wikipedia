@@ -73,7 +73,7 @@ def keyword(request, lang, article):
             print "line is ", line
             res = re.match(r'^(\d+%)\s\[([^\t]+)\t' + r'(0x[0-9A-Fa-f]+)\s+' * 9 + r'\]$', line)
             if res != None:
-                result += "(%s) <A HREF=\"/%s/article/%s/\">%s</A><br/>\n" % (res.group(1), lang, urllib.quote(res.group(2)), res.group(2))
+                result += "(%s) <A HREF=\"/%s/article/%s/\">%s</A><br/>\n" % (res.group(1), lang, urllib.quote(res.group(2)).decode('utf-8'), res.group(2).decode('utf-8'))
             else:
                 print "res is null"
         result += "</body></html>"
