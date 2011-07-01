@@ -40,7 +40,7 @@ require_once( './includes/Defines.php' );
 # Include this site setttings
 require_once( './LocalSettings.php' );
 $wgDebugLogGroups  = array(
-    'bhj'	=> '/dev/tty',
+    'bhj'	=> '/dev/stderr',
 );
 
 // load ParserFunctions extension

@@ -12,7 +12,7 @@ def article(request, lang, article):
         article = article[:-11]
     result = "Not found"
     for line in subprocess.Popen(("wiki-sorted-idx-title-query", lang, article.replace('_', ' ')), stdout=subprocess.PIPE).communicate()[0].split('\n'):
-        print line,
+        print line
         res = re.match(r'^(\d+%)\s\[([^\t]+)\t' + r'(0x[0-9A-Fa-f]+)\s+' * 9 + r'\]$', line)
         if res != None and res.group(2) == article.replace('_', ' '):
             cmd = ["./show.pl", lang]
@@ -28,7 +28,7 @@ def article(request, lang, article):
     return HttpResponse(result)
 
 def search(request, lang, article):
-    print "Searching for article", article
+    print "Searching for article", article.encode('utf-8')
     lines = []
     cmd = ['wiki-query-keywords', lang]
     cmd.extend(article.replace('_', ' ').split())
@@ -55,14 +55,14 @@ def search(request, lang, article):
     return HttpResponse(result)
 
 def keyword(request, lang, article):
-    print "Searching for keywords of article", article
+    print "Searching for keywords of article", article.encode('utf-8')
     lines = []
     cmd = ["wiki-query-keywords", lang]
     for i in article.replace('_', ' ').split():
         cmd.append(i)
     print cmd
     for line in subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].split('\n'):
-        print line,
+        print line
         lines.append(line[:])
     if len(lines) == 0:
         result = '<html><head><title>No exact match for this article name found in Wikipedia (try a keyword search).</title>'
