@@ -36,10 +36,13 @@ ${IDX}: ${XMLBZ2}
 	./mparser.py ${XMLBZ2} > ${IDX}.2
 	export LC_ALL=C && sort -k 10 ${IDX}.2 > $@
 	rm ${IDX}.2
+	wiki-beagle ${IDX}
 
 
 idxdb:
-	@echo -n '${XMLBZ2}' > ./$(LANG).py
+	mkdir -p ../../../external/bin/linux/ext/
+	echo '${XMLBZ2}' > ../../../external/bin/linux/ext/wiki-$(LANG).txt
+	ln -sf ../../../external/bin/linux/ext/wiki-$(LANG).txt $(LANG).py
 ${IDXDB}: ${IDX}
 	@mkdir ./mediawiki_sa/templates/ ./mediawiki_sa/images_cache -p
 	@echo Index built - we are done

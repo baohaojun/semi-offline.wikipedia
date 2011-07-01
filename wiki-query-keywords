@@ -20,7 +20,7 @@ open(my $where, "<", "$mydir/$lang.py") or die "Error openning where-file at $my
 chomp(my $file_info = <$where>);
 close $where;
 $file_info =~ s/.*?"//;
-$file_info =~ s/.xml.bz2"$/.idx/;
+$file_info =~ s/.xml.bz2/.idx/;
 my $beagle_dir = $file_info . ".beagle";
 
 chdir $beagle_dir or die "Error: cant chdir $beagle_dir";

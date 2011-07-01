@@ -42,6 +42,7 @@ sub ShowTopic {
     open OUT, ">/var/tmp/result.html";
     open IN, "/var/tmp/result.tmp";
     while(<IN>) {
+        s,<a href="/article/,<a href="/$lang/article/,g;
 	if (/<body/) {
 	    print OUT;
 	    print OUT <<EOF;

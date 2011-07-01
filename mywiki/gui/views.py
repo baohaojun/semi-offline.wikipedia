@@ -54,10 +54,10 @@ def search(request, lang, article):
         result += "</body></html>"
     return HttpResponse(result)
 
-def keyword(request, article):
+def keyword(request, lang, article):
     print "Searching for keywords of article", article
     lines = []
-    cmd = ["wiki-query-keywords"]
+    cmd = ["wiki-query-keywords", lang]
     for i in article.replace('_', ' ').split():
         cmd.append(i)
     print cmd
@@ -73,7 +73,7 @@ def keyword(request, article):
             print "line is ", line
             res = re.match(r'^(\d+%)\s\[([^\t]+)\t' + r'(0x[0-9A-Fa-f]+)\s+' * 9 + r'\]$', line)
             if res != None:
-                result += "(%s) <A HREF=\"/article/%s/\">%s</A><br/>\n" % (res.group(1), urllib.quote(res.group(2)), res.group(2))
+                result += "(%s) <A HREF=\"/%s/article/%s/\">%s</A><br/>\n" % (res.group(1), lang, urllib.quote(res.group(2)), res.group(2))
             else:
                 print "res is null"
         result += "</body></html>"
