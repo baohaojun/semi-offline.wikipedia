@@ -134,16 +134,9 @@ class ForeignAPIRepo extends FileRepo {
           if (file_exists($md5s_p)) {
             return FormatJson::decode( file_get_contents($md5s_p), true );
           }
-          wfDebugLog('bhj', __METHOD__ . "bhj fetching $url\n"); 
-          $data = Http::get( $url );
-          if ( !$data ) {
-            return null;
-          }
-          wfMkdirParents("images_cache/$md5s_d/");
-          if ( !file_put_contents($md5s_p, $data) || !file_put_contents($md5s_p . ".info", $url)) {
-            wfDebugLog('bhj', __FUNCTION__ . " hello bhj can not put image query data\n");
-          }
-          return FormatJson::decode( $data, true );
+          wfDebugLog('bhj', __METHOD__ . " bhj fetching $url\n"); 
+          system("wiki-cache-image-thumb " . escapeshellarg($url) . " " . escapeshellarg($md5s_p) . "&"); // put it background
+          return null;
 	}
 
 	function getImageInfo( $data ) {
