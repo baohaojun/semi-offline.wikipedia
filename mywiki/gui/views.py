@@ -28,7 +28,10 @@ def article(request, lang, article):
     return HttpResponse(result)
 
 def search(request, lang, article):
-    print "Searching for article", article.encode('utf-8')
+    if type(article) is str:
+        print "Searching for article", article
+    else:
+        print "Searching for article", article.encode('utf-8')
     lines = []
     cmd = ['wiki-query-keywords', lang]
     cmd.extend(article.replace('_', ' ').split())
@@ -55,7 +58,10 @@ def search(request, lang, article):
     return HttpResponse(result)
 
 def keyword(request, lang, article):
-    print "Searching for keywords of article", article.encode('utf-8')
+    if type(article) is str:
+        print "Searching for article", article
+    else:
+        print "Searching for article", article.encode('utf-8')
     lines = []
     cmd = ["wiki-query-keywords", lang]
     for i in article.replace('_', ' ').split():
