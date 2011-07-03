@@ -135,7 +135,7 @@ class ForeignAPIRepo extends FileRepo {
             return FormatJson::decode( file_get_contents($md5s_p), true );
           }
           wfDebugLog('bhj', __METHOD__ . " bhj fetching $url\n"); 
-          system("wiki-cache-image-thumb " . escapeshellarg($url) . " " . escapeshellarg($md5s_p) . "&"); // put it background
+          system("wiki-cache-image-info " . escapeshellarg($url) . " " . escapeshellarg($md5s_p)); // put it background
           return null;
 	}
 

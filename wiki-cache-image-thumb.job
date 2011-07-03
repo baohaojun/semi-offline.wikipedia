@@ -1,14 +1,11 @@
 #!/bin/bash
 
 set -e
-exec 2>>~/2.txt
 set -x
-eval $(for x in `ls -l /proc/$$/fd |grep -P 'socket:\[\d+\]'|pn 9`; do echo exec $x\>/dev/null\;; done)
 url=$1
 md5=$2
 mkdir -p "`dirname $md5`"
-seq=`random`
-
+seq=`random 20`; ((seq = (seq + $$ % 19) % 20)); 
 (
     flock 200
     test -e "$md5".url && test -e "$md5" && exit

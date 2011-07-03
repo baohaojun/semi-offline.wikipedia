@@ -39,7 +39,8 @@ sub ShowTopic {
 	close FALLBACK;
     }
 
-    open OUT, ">/var/tmp/result.html";
+    my $ext = $ENV{'WIKI_RELOAD_THUMB'};
+    open OUT, ">/var/tmp/result.html$ext";
     open IN, "/var/tmp/result.tmp";
     while(<IN>) {
         s,<a href="/article/Zh:,<a href="/zh/article/,g;
@@ -75,3 +76,7 @@ die "Usage: $0  Article prev_block_num prev_block_byte prev_block_bit block_num 
     unless @ARGV == 10;
 
 ShowTopic(@ARGV);
+if ($ENV{'WIKI_RELOAD_THUMB'} eq "") {
+    $ENV{'WIKI_RELOAD_THUMB'} = '.reload';
+    system("reload_thumb.sh", "./show.pl", $lang, @ARGV);
+}
