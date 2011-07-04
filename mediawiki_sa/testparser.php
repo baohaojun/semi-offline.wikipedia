@@ -115,9 +115,12 @@ $wgMessageCache->addMessage( 'pfunc_rel2abs_invalid_depth', "Error: Invalid dept
 $title = Title::newFromText($articletitle);
 $options = new ParserOptions(null); // 1st arg: $user
 $options->setEditSection(false);
-require('skins/Simple.php');
-$options->setSkin(new SkinSimple());
+require('skins/Modern.php');
+$options->setSkin(new SkinModern());
 $output_obj = $p->parse($markup, $title, $options);
+$out_page = new OutputPage;
+$out_page->addParserOutputNoText( $output_obj );
+
 $text = $output_obj->getText();
 $text = preg_replace("/scripts\/index\.php\?title=([^&]*)&amp;action=edit/", "article/$1/", $text);
 $text = preg_replace("/scripts\/index\.php\/([^\"]*)/", "article/$1/", $text); #woc
@@ -215,7 +218,7 @@ wgNoticeProject="wikipedia";
 
 <!--[if lt IE 7]><style type="text/css">body{behavior:url("/w/skins-1.5/vector/csshover.htc")}</style><![endif]-->
 <script src="/scripts/images/presentation/index_002.php" type="text/javascript"></script><script type="text/javascript" src="/scripts/images/presentation/index.php"></script>
-
+  <?php echo $out_page->getScript(); ?>
 </head>
 <body  class="mediawiki ltr ns-0 ns-subject" style="margin: 5px; padding: 15px; ">
   <?php echo $out; ?>
