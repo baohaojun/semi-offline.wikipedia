@@ -116,11 +116,11 @@ class ForeignAPIRepo extends FileRepo {
 		global $wgMemc;
 
 		$query = array_merge( $query,
-				      array(
-					    'format' => 'json',
-					    'action' => 'query',
-					    'redirects' => 'true' 
-					    ) );
+			array(
+				'format' => 'json',
+				'action' => 'query',
+				'redirects' => 'true' 
+			) );
 		if ( $this->mApiBase ) {
 			$url = wfAppendQuery( $this->mApiBase, $query );
 		} else {
@@ -137,6 +137,25 @@ class ForeignAPIRepo extends FileRepo {
 		wfDebugLog('bhj', __METHOD__ . " bhj fetching $url\n"); 
 		system("wiki-cache-image-info " . escapeshellarg($url) . " " . escapeshellarg($md5s_p)); // put it background
 		return null;
+
+		if( !isset( $this->mQueryCache[$url] ) ) {
+			$key = $this->getLocalCacheKey( 'ForeignAPIRepo', 'Metadata', md5( $url ) );
+			$data = $wgMemc->get( $key );
+			if( !$data ) {
+				$data = Http::get( $url );
+				if ( !$data ) {
+					return null;
+				}
+				$wgMemc->set( $key, $data, 3600 );
+			}
+
+			if( count( $this->mQueryCache ) > 100 ) {
+				// Keep the cache from growing infinitely
+				$this->mQueryCache = array();
+			}
+			$this->mQueryCache[$url] = $data;
+		}
+		return FormatJson::decode( $this->mQueryCache[$url], true );
 	}
 
 	function getImageInfo( $data ) {
@@ -203,20 +222,24 @@ class ForeignAPIRepo extends FileRepo {
 			return $url;
 		}
 
+		if ( !$this->canCacheThumbs() ) {
+			return $this->getThumbUrl( $name, $width, $height );
+		}
+
 		$key = $this->getLocalCacheKey( 'ForeignAPIRepo', 'ThumbUrl', $name );
 		if ( $thumbUrl = $wgMemc->get($key) ) {
-			wfDebugLog("bhj", "Got thumb from local cache. $thumbUrl \n");
+			wfDebug("Got thumb from local cache. $thumbUrl \n");
 			return $thumbUrl;
 		}
 		else {
 			$foreignUrl = $this->getThumbUrl( $name, $width, $height );
 			if( !$foreignUrl ) {
-				wfDebugLog("bhj",  __METHOD__ . " Could not find thumburl\n" );
+				wfDebug( __METHOD__ . " Could not find thumburl\n" );
 				return false;
 			}
 			$thumb = Http::get( $foreignUrl );
 			if( !$thumb ) {
-				wfDebugLog("bhj",  __METHOD__ . " Could not download thumb\n" );
+				wfDebug( __METHOD__ . " Could not download thumb\n" );
 				return false;
 			}
 			// We need the same filename as the remote one :)
@@ -224,7 +247,7 @@ class ForeignAPIRepo extends FileRepo {
 			$path = 'thumb/' . $this->getHashPath( $name ) . $name . "/";
 			if ( !is_dir($wgUploadDirectory . '/' . $path) ) {
 				if( !wfMkdirParents($wgUploadDirectory . '/' . $path) ) {
-					wfDebugLog("bhj",   __METHOD__ . " could not create directory for thumb\n" );
+					wfDebug(  __METHOD__ . " could not create directory for thumb\n" );
 					return $foreignUrl;
 				}
 			}
@@ -233,12 +256,12 @@ class ForeignAPIRepo extends FileRepo {
 			wfSuppressWarnings();
 			if( !file_put_contents($wgUploadDirectory . '/' . $path . $fileName, $thumb ) ) {
 				wfRestoreWarnings();
-				wfDebugLog("bhj",  __METHOD__ . " could not write to thumb path\n" );
+				wfDebug( __METHOD__ . " could not write to thumb path\n" );
 				return $foreignUrl;
 			}
 			wfRestoreWarnings();
 			$wgMemc->set( $key, $localUrl, $this->apiThumbCacheExpiry );
-                        wfDebugLog('bhj', __METHOD__ . "got local thumb $localUrl, saving to cache \n");
+			wfDebug( __METHOD__ . " got local thumb $localUrl, saving to cache \n" );
 			return $localUrl;
 		}
 	}
