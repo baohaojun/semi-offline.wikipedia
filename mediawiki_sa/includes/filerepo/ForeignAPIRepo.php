@@ -113,30 +113,30 @@ class ForeignAPIRepo extends FileRepo {
 	}
 
 	function fetchImageQuery( $query ) {
-          global $wgMemc;
+		global $wgMemc;
 
-          $query = array_merge( $query,
-                                array(
-                                      'format' => 'json',
-                                      'action' => 'query',
-                                      'redirects' => 'true' 
-                                      ) );
-          if ( $this->mApiBase ) {
-            $url = wfAppendQuery( $this->mApiBase, $query );
-          } else {
-            $url = $this->makeUrl( $query, 'api' );
-          }
+		$query = array_merge( $query,
+				      array(
+					    'format' => 'json',
+					    'action' => 'query',
+					    'redirects' => 'true' 
+					    ) );
+		if ( $this->mApiBase ) {
+			$url = wfAppendQuery( $this->mApiBase, $query );
+		} else {
+			$url = $this->makeUrl( $query, 'api' );
+		}
 
-          $md5s = md5($url);
-          $md5s_d = substr($md5s, 0, 2);
-          $md5s_f = substr($md5s, 2);
-          $md5s_p = "images_cache/$md5s_d/$md5s_f.mwI";
-          if (file_exists($md5s_p)) {
-            return FormatJson::decode( file_get_contents($md5s_p), true );
-          }
-          wfDebugLog('bhj', __METHOD__ . " bhj fetching $url\n"); 
-          system("wiki-cache-image-info " . escapeshellarg($url) . " " . escapeshellarg($md5s_p)); // put it background
-          return null;
+		$md5s = md5($url);
+		$md5s_d = substr($md5s, 0, 2);
+		$md5s_f = substr($md5s, 2);
+		$md5s_p = "images_cache/$md5s_d/$md5s_f.mwI";
+		if (file_exists($md5s_p)) {
+			return FormatJson::decode( file_get_contents($md5s_p), true );
+		}
+		wfDebugLog('bhj', __METHOD__ . " bhj fetching $url\n"); 
+		system("wiki-cache-image-info " . escapeshellarg($url) . " " . escapeshellarg($md5s_p)); // put it background
+		return null;
 	}
 
 	function getImageInfo( $data ) {
@@ -178,7 +178,7 @@ class ForeignAPIRepo extends FileRepo {
 		$info = $this->getImageInfo( $data );
 
 		if( $data && $info && $info['thumburl'] ) {
-                  wfDebugLog("bhj",  __METHOD__ . " got remote thumb " . $info['thumburl'] . "\n" );
+			wfDebugLog("bhj",  __METHOD__ . " got remote thumb " . $info['thumburl'] . "\n" );
 			return $info['thumburl'];
 		} else {
 			return false;
@@ -189,34 +189,34 @@ class ForeignAPIRepo extends FileRepo {
 		global $wgMemc, $wgUploadPath, $wgServer, $wgUploadDirectory;
 
 		if ( 1 ) {
-                  $url = $this->getThumbUrl( $name, $width, $height );
-                  $md5s = md5($url);
-                  $md5s_d = substr($md5s, 0, 2);
-                  $md5s_f = substr($md5s, 2);
-                  $ext = strrchr($url, '.');
-                  $md5s_p = "images/thumb/$md5s_d/$md5s_f$ext";
+			$url = $this->getThumbUrl( $name, $width, $height );
+			$md5s = md5($url);
+			$md5s_d = substr($md5s, 0, 2);
+			$md5s_f = substr($md5s, 2);
+			$ext = strrchr($url, '.');
+			$md5s_p = "images/thumb/$md5s_d/$md5s_f$ext";
 
-                  if (file_exists($md5s_p)) {
-                    return "http://localhost:8000/scripts/$md5s_p";
-                  }
-                  system("wiki-cache-image-thumb " . escapeshellarg($url) . " " . escapeshellarg($md5s_p) . "&"); // put it background
-                  return $url;
+			if (file_exists($md5s_p)) {
+				return "http://localhost:8000/scripts/$md5s_p";
+			}
+			system("wiki-cache-image-thumb " . escapeshellarg($url) . " " . escapeshellarg($md5s_p) . "&"); // put it background
+			return $url;
 		}
 
 		$key = $this->getLocalCacheKey( 'ForeignAPIRepo', 'ThumbUrl', $name );
 		if ( $thumbUrl = $wgMemc->get($key) ) {
-                  wfDebugLog("bhj", "Got thumb from local cache. $thumbUrl \n");
+			wfDebugLog("bhj", "Got thumb from local cache. $thumbUrl \n");
 			return $thumbUrl;
 		}
 		else {
 			$foreignUrl = $this->getThumbUrl( $name, $width, $height );
 			if( !$foreignUrl ) {
-                          wfDebugLog("bhj",  __METHOD__ . " Could not find thumburl\n" );
+				wfDebugLog("bhj",  __METHOD__ . " Could not find thumburl\n" );
 				return false;
 			}
 			$thumb = Http::get( $foreignUrl );
 			if( !$thumb ) {
-                          wfDebugLog("bhj",  __METHOD__ . " Could not download thumb\n" );
+				wfDebugLog("bhj",  __METHOD__ . " Could not download thumb\n" );
 				return false;
 			}
 			// We need the same filename as the remote one :)
@@ -224,7 +224,7 @@ class ForeignAPIRepo extends FileRepo {
 			$path = 'thumb/' . $this->getHashPath( $name ) . $name . "/";
 			if ( !is_dir($wgUploadDirectory . '/' . $path) ) {
 				if( !wfMkdirParents($wgUploadDirectory . '/' . $path) ) {
-                                  wfDebugLog("bhj",   __METHOD__ . " could not create directory for thumb\n" );
+					wfDebugLog("bhj",   __METHOD__ . " could not create directory for thumb\n" );
 					return $foreignUrl;
 				}
 			}
