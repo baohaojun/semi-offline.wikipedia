@@ -23,6 +23,7 @@ eval $(for x in `ls -l /proc/$$/fd |grep -P 'socket:\[\d+\]'|pn 9`; do echo exec
                 exit
             fi
         done
+	echo load thumb cache done
 	notify-send -t 2000 'Your wikimedia thumb cache is complete'
 	aplay /usr/share/sounds/purple/login.wav
 
