@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
+use String::ShellQuote;
 
 sub LooseEntities {
     $_ = $_[0];
@@ -20,7 +21,16 @@ sub ShowTopic {
     my $foundLine = shift;
     open (my $pipe, "-|", "python", "$mydir/get_article.py", $lang, @_);
     open RESULT, ">/tmp/ow.result.$$";
+    my $line = 0;
     while(<$pipe>) {
+	$line++;
+	if ($line == 2) {
+	    if (m/#REDIRECT \[\[(.*)\]\]$/) {
+		close RESULT;
+		system("wiki-title-query $lang " . shell_quote($1) . " >/tmp/ow.result.$$");
+		last;
+	    }
+	}
         print RESULT $_;
     }
 
