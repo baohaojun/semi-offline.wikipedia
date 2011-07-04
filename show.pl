@@ -15,6 +15,7 @@ chomp(my $mypath = `readlink -f $0`);
 chomp(my $mydir = `dirname $mypath`);
 our $lang = shift @ARGV or die "Error: must supply lang!";
 
+$ENV{"LANGOW"} = $lang;
 sub ShowTopic {
     my $foundLine = shift;
     open (my $pipe, "-|", "python", "$mydir/get_article.py", $lang, @_);

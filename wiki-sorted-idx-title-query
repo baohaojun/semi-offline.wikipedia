@@ -13,8 +13,6 @@ chomp(my $mypath = `readlink -f $0`);
 chomp(my $mydir = `dirname $mypath`);
 our $lang = shift @ARGV or die "Error: must supply lang!";
 
-system("echo -n $lang > $mydir/mediawiki_sa/templates/lang.txt"); #this is very hacky
-
 open(my $where, "<", "$mydir/$lang.py") or die "Error openning where-file at $mydir/$lang.py";
 chomp(my $file_info = <$where>);
 close $where;

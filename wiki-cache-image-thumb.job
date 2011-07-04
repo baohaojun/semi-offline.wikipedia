@@ -5,7 +5,9 @@ set -x
 url=$1
 md5=$2
 mkdir -p "`dirname $md5`"
-seq=`random 20`; ((seq = (seq + $$ % 19) % 20)); 
+seq=`echo $md5|md5sum|pn 1`
+seq=`printf %d 0x"${seq:0:2}"`
+((seq = seq % 20))
 (
     flock 200
     test -e "$md5".url && test -e "$md5" && exit

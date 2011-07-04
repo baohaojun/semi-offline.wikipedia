@@ -3353,9 +3353,7 @@ class Parser {
                   $md5s = md5("$tmpltext");
                   $md5s_d = substr($md5s, 0, 2);
                   $md5s_f = substr($md5s, 2);
-                  if (file_exists("templates/lang.txt")) {
-                          $lang = file_get_contents("templates/lang.txt");
-                  }
+		  $lang = getenv("LANGOW");
                   $md5s_p = "templates/$lang/$md5s_d/$md5s_f.mwt";
                   if (file_exists($md5s_p)) {
                     // wfDebugLog('bhj', __FUNCTION__ . " " .  $tmpltext . " " . $title->getText() . " hello bhj\n"); 

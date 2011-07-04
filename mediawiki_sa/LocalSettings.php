@@ -100,7 +100,7 @@ $wgUseTeX           = false;
 
 $wgLocalInterwiki   = strtolower( $wgSitename );
 
-$wgLanguageCode = "en";
+$wgLanguageCode = getenv("LANGOW");
 
 $wgSecretKey = "2dd6734f6c512324aaca14aa3d588688a74506f24fe277de7fe839a36279116a";
 
