@@ -4,11 +4,26 @@ mypath=`readlink -f $0`
 mydir=`dirname $mypath`
 cd $mydir
 lang=$1
-./wiki-sorted-idx-title-query "$@" > /tmp/ow.db.search.$$ || ( 
+shift
+
+function retry_gbk_big5() {
+    if test -n "$RETRY_GBK_BIG5"; then
+        #already done it!
+        exit
+    fi
+    export RETRY_GBK_BIG5=1
+    set -o pipefail
+    echo "$0" "$@" |iconv -f utf-8 -t gbk  |autob5 |iconv -f big5 -t utf-8|bash && { echo 'Got big5 results, done!' 1>&2 && exit; }
+    echo "$0" "$@" |iconv -f utf-8 -t big5 |autogb |iconv -f gbk  -t utf-8|bash && { echo 'Got gbk  results, done!' 1>&2 && exit; }
+}
+    
+    
+./wiki-sorted-idx-title-query $lang "$@" > /tmp/ow.db.search.$$ || ( 
 # fix something like Template:commonscat-inline, 
 # it should be Template:Commonscat-inline
     echo "$@" |grep -q -i '^template:' || (echo 'Hey! This hack only work for templates!' 1>&2 && false)
-    ./wiki-query-keywords "$@" 2>/dev/null|grep 100% >/tmp/ow.db.search-grep.$$
+    ./wiki-query-keywords $lang "$@" 2>/dev/null|grep 100% >/tmp/ow.db.search-grep.$$ || { retry_gbk_big5 $lang "$@"; exit; }
+        
     if grep -q -i -e "$@" /tmp/ow.db.search-grep.$$; then
         grep -i -e "$@" /tmp/ow.db.search-grep.$$ |perl -ne 'print if (1..1)' > /tmp/ow.db.search.$$
     else
@@ -17,7 +32,8 @@ lang=$1
 )
 
 if test `cat /tmp/ow.db.search.$$|wc -l` != 1; then
-    echo "Error: dbsearch on \`$@' return not exactly 1 line" 1>&2
+    echo "Error: dbsearch on \`$@' return not exactly 1 line $$" 1>&2
+    cat /tmp/ow.db.search.$$ 1>&2
     false
 fi
 

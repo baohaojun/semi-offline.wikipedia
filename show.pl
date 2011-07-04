@@ -39,7 +39,13 @@ sub ShowTopic {
 	close FALLBACK;
     }
 
-    my $ext = $ENV{'WIKI_RELOAD_THUMB'};
+    my $ext;
+    if ($ENV{'WIKI_RELOAD_THUMB'}) {
+        $ext = $ENV{'WIKI_RELOAD_THUMB'};
+    } else {
+        $ext = "";
+    }
+
     open OUT, ">/var/tmp/result.html$ext";
     open IN, "/var/tmp/result.tmp";
     while(<IN>) {
