@@ -20,8 +20,7 @@ def article(request, lang, article):
                 cmd.append(res.group(i))
             
             print cmd
-            subprocess.Popen(cmd).communicate()
-            result = open("/var/tmp/result.html").read() 
+            result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
             break
     else:
         return search(request, lang, article)

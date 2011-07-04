@@ -132,6 +132,7 @@ $out = $text;
 <html class="linux firefox firefox3 gecko gecko1" dir="ltr" xmlns="http://www.w3.org/1999/xhtml" lang="en"><head>
 
 <?php echo "<title>" . htmlspecialchars($articletitle) . " - Semi-Offline Wikipedia, the free encyclopedia</title>"; ?>
+<?php echo $out_page->getScript(); ?>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta http-equiv="Content-Style-Type" content="text/css">
 <meta name="generator" content="MediaWiki 1.16wmf4">
@@ -218,7 +219,6 @@ wgNoticeProject="wikipedia";
 
 <!--[if lt IE 7]><style type="text/css">body{behavior:url("/w/skins-1.5/vector/csshover.htc")}</style><![endif]-->
 <script src="/scripts/images/presentation/index_002.php" type="text/javascript"></script><script type="text/javascript" src="/scripts/images/presentation/index.php"></script>
-  <?php echo $out_page->getScript(); ?>
 </head>
 <body  class="mediawiki ltr ns-0 ns-subject" style="margin: 5px; padding: 15px; ">
   <?php echo $out; ?>

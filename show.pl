@@ -19,18 +19,18 @@ $ENV{"LANGOW"} = $lang;
 sub ShowTopic {
     my $foundLine = shift;
     open (my $pipe, "-|", "python", "$mydir/get_article.py", $lang, @_);
-    open RESULT, ">/var/tmp/result";
+    open RESULT, ">/tmp/ow.result.$$";
     while(<$pipe>) {
         print RESULT $_;
     }
 
-    system("cd $mydir/mediawiki_sa/ && php5 testparser.php /var/tmp/result > /var/tmp/result.tmp");
+    system("cd $mydir/mediawiki_sa/ && php5 testparser.php /tmp/ow.result.$$ > /tmp/ow.result.html.$$");
     if (($? == -1) || ($? & 127) || ($? >> 8)) {
 	print "#### mediawiki_sa parser failed! report to woc.fslab.de ####\n";
-	open FALLBACK, ">/var/tmp/result.tmp";
+	open FALLBACK, ">/tmp/ow.result.html.$$";
 	print FALLBACK "<html><head><title>woc.fslab.de parser failed - report it!</title></head>\n<body>\n";
-	print FALLBACK "<h2>woc.fslab.de parser failed, please report this content (/var/tmp/result) to them!</h2>";
-	open DATA, "/var/tmp/result";
+	print FALLBACK "<h2>woc.fslab.de parser failed, please report this content (/tmp/ow.result.$$) to them!</h2>";
+	open DATA, "/tmp/ow.result.$$";
 	while(<DATA>) {
 	    chomp;
 	    print FALLBACK $_."<BR/>\n";
@@ -47,15 +47,13 @@ sub ShowTopic {
         $ext = "";
     }
 
-    open OUT, ">/var/tmp/result.html$ext";
-    open IN, "/var/tmp/result.tmp";
+    open IN, "/tmp/ow.result.html.$$";
     while(<IN>) {
         s,<a href="/article/Zh:,<a href="/zh/article/,g;
         s,<a href="/article/En:,<a href="/en/article/,g;
         s,<a href="/article/,<a href="/$lang/article/,g;
 	if (/<body/) {
-	    print OUT;
-	    print OUT <<EOF;
+	    print <<EOF;
 <script type="text/javascript">
 function DoSearch(form)
 {
@@ -70,13 +68,12 @@ Search for
 <hr>
 </form>
 EOF
-	    print OUT "<H1>".$foundLine."</H1>\n";
+	    print "<H1>".$foundLine."</H1>\n";
 	} else {
-	    print OUT;
+	    print ;
 	}
     }
     close IN;
-    close OUT;
 }
 
 die "Usage: $0  Article prev_block_num prev_block_byte prev_block_bit block_num block_byte block_bit block start len\n"

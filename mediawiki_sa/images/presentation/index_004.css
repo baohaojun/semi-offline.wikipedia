@@ -658,9 +658,8 @@ div.noarticletext {
 
 /* class hiddenStructure is defunct. See [[Wikipedia:hiddenStructure]] */
 .hiddenStructure {
-    display: inline ! important;
-    color: #f00; 
-    background-color: #0f0;
+  display: none;
+  speak: none;
 }
 
 /* suppress missing interwiki image links where #ifexist cannot
