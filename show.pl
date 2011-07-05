@@ -68,7 +68,7 @@ sub ShowTopic {
 <script type="text/javascript">
 function DoSearch(form)
 {
-top.location='/searchbar/?data='+form.data.value;
+top.location="/$lang/searchbar/?data="+form.data.value;
 }
 </script>
 <form name="SearchForm" onSubmit="DoSearch(this.form)" method="get" action="/searchbar">

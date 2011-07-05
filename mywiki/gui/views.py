@@ -84,9 +84,9 @@ def keyword(request, lang, article):
         result += "</body></html>"
     return HttpResponse(result)
 
-def searchbar(request):
+def searchbar(request, lang):
     searchData = request.GET['data'].encode('utf-8')
-    return keyword(request, searchData)
+    return keyword(request, lang, searchData)
 # Local Variables: #
 # tab-width: 4 #
 # python-indent: 4 #
