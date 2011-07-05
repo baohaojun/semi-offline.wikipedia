@@ -63,6 +63,7 @@ sub ShowTopic {
         s,<a href="/article/En:,<a href="/en/article/,g;
         s,<a href="/article/,<a href="/$lang/article/,g;
 	if (/<body/) {
+	    print;
 	    print <<EOF;
 <script type="text/javascript">
 function DoSearch(form)

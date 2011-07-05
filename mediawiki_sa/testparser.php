@@ -115,8 +115,8 @@ $wgMessageCache->addMessage( 'pfunc_rel2abs_invalid_depth', "Error: Invalid dept
 $title = Title::newFromText($articletitle);
 $options = new ParserOptions(null); // 1st arg: $user
 $options->setEditSection(false);
-require('skins/Modern.php');
-$options->setSkin(new SkinModern());
+require('skins/Simple.php');
+$options->setSkin(new SkinSimple());
 $output_obj = $p->parse($markup, $title, $options);
 $out_page = new OutputPage;
 $out_page->addParserOutputNoText( $output_obj );

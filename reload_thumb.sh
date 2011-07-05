@@ -13,7 +13,7 @@ eval $(for x in `ls -l /proc/$$/fd |grep -P 'socket:\[\d+\]'|pn 9`; do echo exec
             fi
         done
 
-        "$@" >/dev/null 2>&1
+        "$@" >~/.show.pl.html 2>&1
 
         ((x=0))
         while ps -eo cmd|grep -v 'grep -q -e' 2>/dev/null|grep -q -e 'bash.*wiki-cache.*job'; do 
