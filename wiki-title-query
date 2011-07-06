@@ -13,8 +13,8 @@ function retry_gbk_big5() {
     fi
     export RETRY_GBK_BIG5=1
     set -o pipefail
-    echo "$0" "$@" |iconv -f utf-8 -t gbk  |autob5 |iconv -f big5 -t utf-8|bash && { echo 'Got big5 results, done!' 1>&2 && exit; }
-    echo "$0" "$@" |iconv -f utf-8 -t big5 |autogb |iconv -f gbk  -t utf-8|bash && { echo 'Got gbk  results, done!' 1>&2 && exit; }
+    echo "$0" "$@" |gb2b5|bash && { echo 'Got big5 results, done!' 1>&2 && exit; }
+    echo "$0" "$@" |b52gb|bash && { echo 'Got gbk  results, done!' 1>&2 && exit; }
 }
     
     
