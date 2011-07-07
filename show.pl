@@ -15,6 +15,7 @@ sub LooseEntities {
 chomp(my $mypath = `readlink -f $0`);
 chomp(my $mydir = `dirname $mypath`);
 our $lang = shift @ARGV or die "Error: must supply lang!";
+our $article = $ARGV[0];
 
 $ENV{"LANGOW"} = $lang;
 sub ShowTopic {
@@ -76,6 +77,7 @@ Search for
 <input type="text" name="data" size="50">
 <input type="button" value="Submit" onclick="DoSearch(this.form)">
 <br>
+<a href="http://$lang.wikipedia.org/wiki/$article"> http://$lang.wikipedia.org/wiki/$article </a>
 <hr>
 </form>
 EOF
