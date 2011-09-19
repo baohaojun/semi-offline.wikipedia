@@ -26,7 +26,7 @@ sub ShowTopic {
     while(<$pipe>) {
 	$line++;
 	if ($line == 2) {
-	    if (m/#REDIRECT \[\[(.*)\]\]$/) {
+	    if (m/#REDIRECT \[\[(.*?)(#.*)?\]\]$/) {
 		close RESULT;
 		system("wiki-title-query $lang " . shell_quote($1) . " >/tmp/ow.result.$$");
 		last;
