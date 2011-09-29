@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # we will require that each ARG must appear in the wiki title, the
-# first one is special, we will use it for beagle-grep
+# first one is special, we will use it for beagrep
 
 use strict;
 use utf8;
@@ -27,7 +27,7 @@ chdir $beagle_dir or die "Error: cant chdir $beagle_dir";
 
 my $arg = shift @ARGV or die "Error: at least one argument is needed";
 
-open(my $file, "-|", "beagle-grep.sh", "-e", $arg, "-i") or die "Error: failed beagle-grep.sh";
+open(my $file, "-|", "beagrep", "-e", $arg, "-i") or die "Error: failed beagrep";
 
 my @args;
 for (@ARGV) {
