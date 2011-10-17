@@ -27,8 +27,10 @@ sub ShowTopic {
 	$line++;
 	if ($line == 2) {
 	    if (m/#REDIRECT \[\[(.*?)(#.*)?\]\]$/) {
+		my $redirect = $1;
+		$redirect =~ s/_/ /g;
 		close RESULT;
-		system("wiki-title-query $lang " . shell_quote($1) . " >/tmp/ow.result.$$");
+		system("wiki-title-query $lang " . shell_quote($redirect) . " >/tmp/ow.result.$$");
 		last;
 	    }
 	}
