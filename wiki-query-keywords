@@ -21,9 +21,9 @@ chomp(my $file_info = <$where>);
 close $where;
 $file_info =~ s/.*?"//;
 $file_info =~ s/.xml.bz2/.idx/;
-my $beagle_dir = $file_info . ".beagle";
+my $beagrep_dir = $file_info . ".beagrep";
 
-chdir $beagle_dir or die "Error: cant chdir $beagle_dir";
+chdir $beagrep_dir or die "Error: cant chdir $beagrep_dir";
 
 my $arg = shift @ARGV or die "Error: at least one argument is needed";
 

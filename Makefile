@@ -36,7 +36,7 @@ ${IDX}: ${XMLBZ2}
 	./mparser.py ${XMLBZ2} > ${IDX}.2
 	export LC_ALL=C && sort -k 10 ${IDX}.2 > $@
 	rm ${IDX}.2
-	wiki-beagle ${IDX}
+	wiki-beagrep ${IDX}
 
 
 idxdb:
