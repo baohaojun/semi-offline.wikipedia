@@ -25,7 +25,7 @@ eval $(for x in `ls -l /proc/$$/fd |grep -P 'socket:\[\d+\]'|pn 9`; do echo exec
             fi
         done
 	echo load thumb cache done
-	bhj-notify "Offline Wikipedia" "Your wikimedia thumb cache is complete: ""$3"
+	bhj-short-notify "Offline Wikipedia" "Your wikimedia thumb cache is complete: ""$3"
 	aplay /usr/share/sounds/purple/login.wav 
-
+	sleep 5
     ) 1>&2 &
