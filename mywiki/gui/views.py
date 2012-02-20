@@ -107,6 +107,19 @@ def keyword(request, lang, article):
 def searchbar(request, lang):
     searchData = request.GET['data'].encode('utf-8')
     return keyword(request, lang, searchData)
+
+def searchdict(request):
+    searchData = request.GET['data'].encode('utf-8')
+    return do_dict(request, searchData)
+
+def searchdict_def(request):
+    searchData = request.GET['data'].encode('utf-8')
+    return do_dict_defs(request, searchData)
+
+def searchdict_match(request):
+    searchData = request.GET['data'].encode('utf-8')
+    return do_dict_match(request, searchData)
+
 # Local Variables: #
 # tab-width: 4 #
 # python-indent: 4 #

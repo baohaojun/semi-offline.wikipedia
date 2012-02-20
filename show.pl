@@ -74,7 +74,7 @@ function DoSearch(form)
 top.location="/$lang/searchbar/?data="+form.data.value;
 }
 </script>
-<form name="SearchForm" onSubmit="DoSearch(this.form)" method="get" action="/searchbar">
+<form name="SearchForm" onSubmit="DoSearch(this.form)" method="get" action="/$lang/searchbar">
 Search for
 <input type="text" name="data" size="50">
 <input type="button" value="Submit" onclick="DoSearch(this.form)">
