@@ -11,6 +11,7 @@ def article(request, lang, article):
     if article.endswith("/&redlink=1"):
         article = article[:-11]
     result = "Not found"
+    print 'do article for', lang, ':', article
     for line in subprocess.Popen(("wiki-sorted-idx-title-query", lang, article.replace('_', ' ')), stdout=subprocess.PIPE).communicate()[0].split('\n'):
         print line
         res = re.match(r'^(\d+%)\s\[([^\t]+)\t' + r'(0x[0-9A-Fa-f]+)\s+' * 9 + r'\]$', line)
@@ -24,6 +25,25 @@ def article(request, lang, article):
             break
     else:
         return search(request, lang, article)
+    return HttpResponse(result)
+
+def do_dict(request, entry):
+    entry = entry.encode('utf-8')
+    result = "Not found"
+    cmd = ["dict", entry]
+    result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
+    return HttpResponse(result)
+
+def do_dict_defs(request, entry):
+    entry = entry.encode('utf-8')
+    cmd = ["dict-defines", entry]
+    result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
+    return HttpResponse(result)
+
+def do_dict_defs_sub(request, entry, sub_entry):
+    entry = entry.encode('utf-8')
+    cmd = ["dict-defines", entry, sub_entry]
+    result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
     return HttpResponse(result)
 
 def search(request, lang, article):
