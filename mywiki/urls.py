@@ -13,7 +13,7 @@ urlpatterns = patterns('',
                        (r'^(search-)?dict-defines/(?P<entry>.+?)/?$', 'mywiki.gui.views.do_dict_defs'),
                        (r'^(search-)?dict-matching/(?P<entry>.+)$', 'mywiki.gui.views.do_dict_matching'),
                        (r'^dict-defines-sub/(?P<entry>.+?)/(?P<sub_entry>.*?)/?$', 'mywiki.gui.views.do_dict_defs_sub'),
-                       (r'^dict-images/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '../../dict/res/'}),
+                       (r'^dict-images/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '../../dict/JPG/'}),
                        (r'^scripts/images/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '../mediawiki_sa/images/'}),
                        (r'^scripts/skins/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '../mediawiki_sa/skins/'}),
                        )
