@@ -46,6 +46,18 @@ def do_dict_defs_sub(request, entry, sub_entry):
     result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
     return HttpResponse(result)
 
+def do_dict_match(request, entry):
+    entry = entry.encode('utf-8')
+    cmd = ["dict-matching", entry]
+    result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
+    return HttpResponse(result)
+    
+def do_dict_matching_sub(request, entry, sub_entry):
+    entry = entry.encode('utf-8')
+    cmd = ["dict-matching", entry, sub_entry]
+    result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
+    return HttpResponse(result)
+
 def search(request, lang, article):
     if type(article) is str:
         print "Searching for article", article
