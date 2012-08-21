@@ -11,7 +11,10 @@ seq=`printf %d 0x"${seq:0:2}"`
 (
     flock 200
     test -e "$md5".url && test -e "$md5" && exit
-    export http_proxy=localhost:8580
+    if test -e ~/.wikiproxyrc; then
+        . ~/.wikiproxyrc
+        # export http_proxy=localhost:8580
+    fi
     wget "$url" -O "$md5".$$.tmp -o /dev/null
     mv "$md5".$$.tmp "$md5"
     echo "$url" > "$md5".url
