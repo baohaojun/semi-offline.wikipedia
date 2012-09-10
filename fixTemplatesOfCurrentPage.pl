@@ -31,7 +31,7 @@ for my $template (keys %templates) {
 	my $url = $templates{$template};
         $url =~ s,/*$,/,;
         #print "wget -O /var/tmp/fixup.html http://localhost:8000/$url >/dev/null 2>&1\n";
-	system("wget -O /var/tmp/fixup.html http://localhost:8000/$url >/dev/null 2>&1");
+	system("wget -O /var/tmp/fixup.html http://offline-wiki:34567/$url >/dev/null 2>&1");
 	if ($? == -1) {
         }
         elsif ($? & 127) {

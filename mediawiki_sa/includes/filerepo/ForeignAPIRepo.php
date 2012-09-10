@@ -216,7 +216,7 @@ class ForeignAPIRepo extends FileRepo {
 			$md5s_p = "images/thumb/$md5s_d/$md5s_f$ext";
 
 			if (file_exists($md5s_p)) {
-				return "http://localhost:8000/scripts/$md5s_p";
+				return "http://offline-wiki:34567/scripts/$md5s_p";
 			}
 			system("wiki-cache-image-thumb " . escapeshellarg($url) . " " . escapeshellarg($md5s_p) . "&"); // put it background
 			return $url;
