@@ -17,13 +17,22 @@ chomp(my $mydir = `dirname $mypath`);
 our $lang = shift @ARGV or die "Error: must supply lang!";
 our $article = $ARGV[0];
 
+open(my $debug, ">", glob("~/.logs/show.pl.log"))
+    or die "Can not open debug log file ~/.logs/show.pl.log";
+sub debug(@) {
+    print $debug "@_\n";
+}
+
+
 $ENV{"LANGOW"} = $lang;
 sub ShowTopic {
     my $foundLine = shift;
     open (my $pipe, "-|", "python", "$mydir/get_article.py", $lang, @_);
+    debug "Got args @ARGV";
     open RESULT, ">/tmp/ow.result.$$";
     my $line = 0;
     while(<$pipe>) {
+	debug "pipe: $_";
 	$line++;
 	if ($line == 2) {
 	    if (m/#REDIRECT \[\[(.*?)(#.*)?\]\]$/) {
