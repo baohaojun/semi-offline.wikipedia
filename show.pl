@@ -28,14 +28,14 @@ $ENV{"LANGOW"} = $lang;
 sub ShowTopic {
     my $foundLine = shift;
     open (my $pipe, "-|", "python", "$mydir/get_article.py", $lang, @_);
-    debug "Got args @ARGV";
+    debug "exec python $mydir/get_article.py $lang @ARGV";
     open RESULT, ">/tmp/ow.result.$$";
     my $line = 0;
     while(<$pipe>) {
-	debug "pipe: $_";
+	debug "got: $_";
 	$line++;
 	if ($line == 2) {
-	    if (m/#REDIRECT \[\[(.*?)(#.*)?\]\]$/) {
+	    if (m/#REDIRECT ?\[\[(.*?)(#.*)?\]\](?:\Q {{R from other capitalisation}}\E)?$/i) {
 		my $redirect = $1;
 		$redirect =~ s/_/ /g;
 		close RESULT;
