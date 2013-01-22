@@ -1,1 +1,1 @@
-../../../external/bin/linux/ext/wiki-zh.txt
+../../../external/bin/Linux/ext/wiki-zh.txt

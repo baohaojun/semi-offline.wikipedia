@@ -40,9 +40,9 @@ ${IDX}: ${XMLBZ2}
 
 
 idxdb:
-	mkdir -p ../../../external/bin/linux/ext/
-	echo '${XMLBZ2}' > ../../../external/bin/linux/ext/wiki-$(LANG).txt
-	ln -sf ../../../external/bin/linux/ext/wiki-$(LANG).txt $(LANG).py
+	mkdir -p ../../../external/bin/Linux/ext/
+	echo '${XMLBZ2}' > ../../../external/bin/Linux/ext/wiki-$(LANG).txt
+	ln -sf ../../../external/bin/Linux/ext/wiki-$(LANG).txt $(LANG).py
 ${IDXDB}: ${IDX}
 	@mkdir ./mediawiki_sa/templates/ ./mediawiki_sa/images_cache -p
 	@echo Index built - we are done
