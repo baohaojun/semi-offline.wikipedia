@@ -1,0 +1,4 @@
+#+title: Semi Offline Wikipedia
+
+Offline Wikipedia which can also download images when online (hence
+Semi in the name).
