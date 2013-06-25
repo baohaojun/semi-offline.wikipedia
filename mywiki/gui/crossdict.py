@@ -115,8 +115,20 @@ html_head = "<html> <head> <link rel='stylesheet' href='dict.css' type='text/css
 
 html_tail = "</body></html>"
 def getExplanation(word):
-    start_ends = getStartEnds(getWordIdxInternal(word))
+    wordIdx = getWordIdxInternal(word)
+    start_ends = getStartEnds(wordIdx)
     defs = []
+
+    entries = 10
+    minIdx = max(wordIdx - entries / 2, 0)
+    maxIdx = min(wordIdx + entries / 2 + 1, mTotalEntries)
+
+    table = []
+    for i in range(minIdx, maxIdx):
+        word = getWord(i)
+        table.append("<tr><td><a href='%s'>%s</a></tr></td>" % (word, word if i != wordIdx else ("<span style='color: red'>%s</span>" % word)))
+
+    table_str = "<div style='float: left; margin-right: 2ex'><table>" + ''.join(table) + "</table></div>"
 
     if start_ends:
         for p in start_ends:
@@ -124,10 +136,56 @@ def getExplanation(word):
             crossdict_dict.seek(start);
             str = crossdict_dict.read(end - start)
             defs.append(str)
-        return html_head + ''.join(defs) + html_tail
+        return html_head + table_str + '<div>' +  ''.join(defs) + '</div>' + html_tail
 
     return ""
 
+def getExplanations(word):
+    start_ends = getStartEnds(getWordIdxInternal(word))
+    defs = []
+    
+    if start_ends:
+        for p in start_ends:
+            (start, end) = p
+            crossdict_dict.seek(start)
+            str = crossdict_dict.read(end - start)
+            defs.append(str)
+        return defs
+    return []
+
+def uniq_ahd():
+    
+    newDict = open(os.path.expanduser("~/src/ahd/ahd.dz2"), "w")
+    newIdx = open(os.path.expanduser("~/src/ahd/ahd.idx2"), "w")
+    newIi = open(os.path.expanduser("~/src/ahd/ahd.ii2"), "w")
+
+    
+    for i in range(0, mTotalEntries):
+        word = getWord(i)
+        defs_map = {}
+        defs = getExplanations(word)
+        uniq_defs = []
+        for d in range(0, len(defs)):
+            defs[d] = ''.join(defs[d].split("\r"))
+            if not defs[d] in defs_map:
+                defs_map[defs[d]] = 1
+                uniq_defs.append(defs[d])
+            else:
+                print "%s:%d: word %s has dups" % (inspect.stack()[0][1], inspect.stack()[0][2], word)
+
+        newIdx.write(word)
+        newIdx.write(chr(0))
+        
+        newIi.write(struct.pack("!I", newIdx.tell()))
+        newIdx.write(chr(len(uniq_defs)))
+
+        for d in uniq_defs:
+            newIdx.write(struct.pack("!I", newDict.tell()))
+            newDict.write(d)
+            newIdx.write(struct.pack("!I", newDict.tell()))
+            
+
 if __name__ == '__main__':
+    # uniq_ahd()
     print getExplanation(sys.argv[1])
 
