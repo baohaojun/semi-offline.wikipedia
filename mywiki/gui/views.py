@@ -1,5 +1,6 @@
 from django.http import *
 import os, re, urllib, subprocess
+import crossdict
 
 def index(request):
     return article(request, "Wikipedia")
@@ -29,16 +30,11 @@ def article(request, lang, article):
 
 def do_dict(request, entry):
     entry = entry.encode('utf-8')
-    result = "Not found"
-    cmd = ["dict", entry]
-    result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
-    return HttpResponse(result)
+    return HttpResponse(crossdict.getExplanation(entry))
 
 def do_dict_defs(request, entry):
     entry = entry.encode('utf-8')
-    cmd = ["dict-defines", entry]
-    result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
-    return HttpResponse(result)
+    return crossdict.getExplanation(entry)
 
 def do_dict_defs_sub(request, entry, sub_entry):
     entry = entry.encode('utf-8')
