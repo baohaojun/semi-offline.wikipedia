@@ -126,17 +126,17 @@ def getExplanation(word):
     table = []
     for i in range(minIdx, maxIdx):
         word = getWord(i)
-        table.append("<tr><td><a href='%s'>%s</a></tr></td>" % (word, word if i != wordIdx else ("<span style='color: red'>%s</span>" % word)))
+        table.append("<tr><td><a href='%s'>%s</a></td></tr>" % (word, word if i != wordIdx else ("<span style='color: red'>%s</span>" % word)))
 
-    table_str = "<div style='float: left; margin-right: 2ex'><table>" + ''.join(table) + "</table></div>"
+    table_str = "<div id='container'><div id='word-list'><table>" + ''.join(table) + "</table></div>"
 
     if start_ends:
         for p in start_ends:
             (start, end) = p
             crossdict_dict.seek(start);
             str = crossdict_dict.read(end - start)
-            defs.append(str)
-        return html_head + table_str + '<div>' +  ''.join(defs) + '</div>' + html_tail
+            defs.append(str.replace('ALIGN="center" WIDTH="100%"', ''))
+        return html_head + '<table><tr><td class="topAlign left-panel">' + table_str + '</td><td class="topAlign"><div>' +  ''.join(defs) + '</div></td></tr></table></div>' + html_tail
 
     return ""
 
