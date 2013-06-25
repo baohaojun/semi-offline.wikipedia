@@ -128,7 +128,7 @@ def getExplanation(word):
         word = getWord(i)
         table.append("<tr><td><a href='%s'>%s</a></td></tr>" % (word, word if i != wordIdx else ("<span style='color: red'>%s</span>" % word)))
 
-    table_str = "<div id='container'><div id='word-list'><table>" + ''.join(table) + "</table></div>"
+    table_str = "<table>" + ''.join(table) + "</table>"
 
     if start_ends:
         for p in start_ends:
@@ -136,7 +136,7 @@ def getExplanation(word):
             crossdict_dict.seek(start);
             str = crossdict_dict.read(end - start)
             defs.append(str.replace('ALIGN="center" WIDTH="100%"', ''))
-        return html_head + '<table><tr><td class="topAlign left-panel">' + table_str + '</td><td class="topAlign"><div>' +  ''.join(defs) + '</div></td></tr></table></div>' + html_tail
+        return html_head + '<table><tr><td class="topAlign left-panel">' + table_str + '</td><td class="topAlign"><div>' +  ''.join(defs) + '</div></td></tr></table>' + html_tail
 
     return ""
 
