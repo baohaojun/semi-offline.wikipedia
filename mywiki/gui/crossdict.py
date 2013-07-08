@@ -115,6 +115,7 @@ html_head = "<html> <head> <link rel='stylesheet' href='dict.css' type='text/css
 
 html_tail = "</body></html>"
 def getExplanation(word):
+    word = word.strip()
     wordIdx = getWordIdxInternal(word)
     start_ends = getStartEnds(wordIdx)
     defs = []
