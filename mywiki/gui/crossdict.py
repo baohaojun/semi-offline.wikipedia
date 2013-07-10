@@ -1,50 +1,20 @@
+import re
 import os
 import sys
 import struct
 import unicodedata
 import inspect
-
-crossdict_dict = open(os.path.expanduser("~/src/ahd/ahd.dz"))
-index = open(os.path.expanduser("~/src/ahd/ahd.idx"))
-ii = open(os.path.expanduser("~/src/ahd/ahd.ii"))
-
-mTotalEntries = os.stat(os.path.expanduser("~/src/ahd/ahd.ii")).st_size / 4
-
-def getEntryEndPos(idx):
-    pos0 = getByte0Pos(idx)
-    index.seek(pos0 + 1)
-    nDefs = ord(index.read(1))
-    return pos0 + 1 + nDefs * 8
-
-def getByte0Pos(idx):
-    ii.seek(idx * 4)
-    ret = struct.unpack("!I", ii.read(4))[0]
-    return ret - 1
-    
-def getWordInternal(idx):
-    if idx < 0 or idx >= mTotalEntries:
-        return ""
-
-    wordStart = 0
-    if idx != 0:
-        wordStart = getEntryEndPos(idx - 1) + 1
-
-    wordEndPlus1 = getByte0Pos(idx)
-    if wordEndPlus1 <= wordStart:
-        return ""
-
-    index.seek(wordStart)
-    word = index.read(wordEndPlus1 - wordStart)
-    return word
+from OrderedSet import OrderedSet
 
 def getNormalWord(word):
     return unicodedata.normalize(
         'NFKD', word.decode('utf-8')
     ).encode('ascii','ignore')
 
-def getWordIdxInternal(word):
 
-    return binarySearchHelper(getNormalWord(word), word, 0, mTotalEntries)
+
+def ncasecmp(a, b):
+    return cmp(getNormalWord(a).lower(), getNormalWord(b).lower())
 
 def compareToIgnoreCase(w1, w2):
     w1 = w1.lower()
@@ -56,137 +26,255 @@ def compareToIgnoreCase(w1, w2):
     else:
         return 1
 
-def tryToFindExactMatch(normalWord, word, mid):
-    while True:
-        mid = mid - 1
-        if mid < 0 or compareToIgnoreCase(normalWord, getNormalWord(getWord(mid))) != 0:
-            break
-            
-    while True:
-        mid = mid + 1
-        if (word == (getWord(mid))) :
-            return mid
-            
-        if compareToIgnoreCase(normalWord, getNormalWord(getWord(mid))) != 0:
-            break
-    
-    return mid - 1
-
-def binarySearchHelper(normalWord, word, min, maxP1):
-    if (min + 1 >= maxP1):
-        return min
-
-        
-    mid = (min + maxP1) / 2
-    midWord = getWord(mid)
-    midWordNormal = getNormalWord(midWord)
-
-    compRes = compareToIgnoreCase(normalWord, midWordNormal)
-    if (compRes == 0):
-        if (word == midWord):
-            return mid
+class CrossDict:
+    def __init__(self, dict_name):
+        self.crossdict_dict = open(os.path.expanduser("~/src/ahd/%s.dz" % dict_name))
+        self.index = open(os.path.expanduser("~/src/ahd/%s.idx" % dict_name))
+        self.ii = open(os.path.expanduser("~/src/ahd/%s.ii" % dict_name))
+        self.mTotalEntries = os.stat(os.path.expanduser("~/src/ahd/%s.ii" % dict_name)).st_size / 4
+        if dict_name == 'ahd':
+            self.derived_dict = CrossDict('derive')
         else:
-            return tryToFindExactMatch(normalWord, word, mid)
+            self.derived_dict = None
 
-    elif ( compRes <= 0):
-        return binarySearchHelper(normalWord, word, min, mid);
-    else :
-        return binarySearchHelper(normalWord, word, mid + 1, maxP1);
+    def getEntryEndPos(self, idx):
+        pos0 = self.getByte0Pos(idx)
+        self.index.seek(pos0 + 1)
+        nDefs = ord(self.index.read(1))
+        return pos0 + 1 + nDefs * 8
+
+    def getByte0Pos(self, idx):
+        self.ii.seek(idx * 4)
+        ret = struct.unpack("!I", self.ii.read(4))[0]
+        return ret - 1
+
+    def getWordInternal(self, idx):
+        if idx < 0 or idx >= self.mTotalEntries:
+            return ""
+
+        wordStart = 0
+        if idx != 0:
+            wordStart = self.getEntryEndPos(idx - 1) + 1
+
+        wordEndPlus1 = self.getByte0Pos(idx)
+        if wordEndPlus1 <= wordStart:
+            return ""
+
+        self.index.seek(wordStart)
+        word = self.index.read(wordEndPlus1 - wordStart)
+        return word
+
+    def getWordIdxInternal(self, word):
+        return self.binarySearchHelper(getNormalWord(word), word, 0, self.mTotalEntries)
 
 
-def getWord(idx):
-    return getWordInternal(idx)
+    def tryToFindExactMatch(self, normalWord, word, mid):
+        while True:
+            mid = mid - 1
+            if mid < 0 or compareToIgnoreCase(normalWord, getNormalWord(self.getWord(mid))) != 0:
+                break
 
-def getStartEnds(idx):
-    start_ends = []
-    
-    pos0 = getByte0Pos(idx)
-    index.seek(pos0 + 1)
-    nDefs = ord(index.read(1))
+        while True:
+            mid = mid + 1
+            if (word == (self.getWord(mid))) :
+                return mid
 
-    for i in range(0, nDefs):
-        start = struct.unpack("!I", index.read(4))
-        end = struct.unpack("!I", index.read(4))
-        start_ends.append((start[0], end[0]))
+            if compareToIgnoreCase(normalWord, getNormalWord(self.getWord(mid))) != 0:
+                break
 
-    return start_ends;
+        return mid - 1
 
-html_head = "<html> <head> <link rel='stylesheet' href='dict.css' type='text/css'> <script src='jquery.js'></script> <script src='rangy-core.js'></script> <script src='rangy-serializer.js'></script> <script src='android.selection.js'></script> </head> <body>"
+    def binarySearchHelper(self, normalWord, word, min, maxP1):
+        if (min + 1 >= maxP1):
+            return min
 
-html_tail = "</body></html>"
-def getExplanation(word):
-    word = word.strip()
-    wordIdx = getWordIdxInternal(word)
-    start_ends = getStartEnds(wordIdx)
-    defs = []
+        mid = (min + maxP1) / 2
+        midWord = self.getWord(mid)
 
-    entries = 10
-    minIdx = max(wordIdx - entries / 2, 0)
-    maxIdx = min(wordIdx + entries / 2 + 1, mTotalEntries)
+        midWordNormal = getNormalWord(midWord)
 
-    table = []
-    for i in range(minIdx, maxIdx):
-        word = getWord(i)
-        table.append("<tr><td><a href='%s'>%s</a></td></tr>" % (word, word if i != wordIdx else ("<span style='color: red'>%s</span>" % word)))
-
-    table_str = "<table>" + ''.join(table) + "</table>"
-
-    if start_ends:
-        for p in start_ends:
-            (start, end) = p
-            crossdict_dict.seek(start);
-            str = crossdict_dict.read(end - start)
-            defs.append(str.replace('ALIGN="center" WIDTH="100%"', ''))
-        return html_head + '<table><tr><td class="topAlign left-panel">' + table_str + '</td><td class="topAlign"><div>' +  ''.join(defs) + '</div></td></tr></table>' + html_tail
-
-    return ""
-
-def getExplanations(word):
-    start_ends = getStartEnds(getWordIdxInternal(word))
-    defs = []
-    
-    if start_ends:
-        for p in start_ends:
-            (start, end) = p
-            crossdict_dict.seek(start)
-            str = crossdict_dict.read(end - start)
-            defs.append(str)
-        return defs
-    return []
-
-def uniq_ahd():
-    
-    newDict = open(os.path.expanduser("~/src/ahd/ahd.dz2"), "w")
-    newIdx = open(os.path.expanduser("~/src/ahd/ahd.idx2"), "w")
-    newIi = open(os.path.expanduser("~/src/ahd/ahd.ii2"), "w")
-
-    
-    for i in range(0, mTotalEntries):
-        word = getWord(i)
-        defs_map = {}
-        defs = getExplanations(word)
-        uniq_defs = []
-        for d in range(0, len(defs)):
-            defs[d] = ''.join(defs[d].split("\r"))
-            if not defs[d] in defs_map:
-                defs_map[defs[d]] = 1
-                uniq_defs.append(defs[d])
+        compRes = compareToIgnoreCase(normalWord, midWordNormal)
+        if (compRes == 0):
+            if (word == midWord):
+                return mid
             else:
-                print "%s:%d: word %s has dups" % (inspect.stack()[0][1], inspect.stack()[0][2], word)
+                return self.tryToFindExactMatch(normalWord, word, mid)
 
-        newIdx.write(word)
-        newIdx.write(chr(0))
-        
-        newIi.write(struct.pack("!I", newIdx.tell()))
-        newIdx.write(chr(len(uniq_defs)))
+        elif ( compRes <= 0):
+            return self.binarySearchHelper(normalWord, word, min, mid);
+        else :
+            return self.binarySearchHelper(normalWord, word, mid + 1, maxP1);
 
-        for d in uniq_defs:
-            newIdx.write(struct.pack("!I", newDict.tell()))
-            newDict.write(d)
-            newIdx.write(struct.pack("!I", newDict.tell()))
-            
+
+    def getWord(self, idx):
+        return self.getWordInternal(idx)
+
+    def getStartEnds(self, idx):
+        start_ends = []
+
+        pos0 = self.getByte0Pos(idx)
+        self.index.seek(pos0 + 1)
+        nDefs = ord(self.index.read(1))
+
+        for i in range(0, nDefs):
+            start = struct.unpack("!I", self.index.read(4))
+            end = struct.unpack("!I", self.index.read(4))
+            start_ends.append((start[0], end[0]))
+
+        return start_ends;
+
+    def getExplanation(self, word):
+        html_head = "<html> <head> <link rel='stylesheet' href='dict.css' type='text/css'> <script src='jquery.js'></script> <script src='rangy-core.js'></script> <script src='rangy-serializer.js'></script> <script src='android.selection.js'></script> </head> <body>"
+
+        html_tail = "</body></html>"
+
+        word = word.strip()
+        wordIdx = self.getWordIdxInternal(word)
+        wordX = self.getWord(wordIdx)
+
+        if (getNormalWord(word).lower() != getNormalWord(wordX).lower()) and self.derived_dict:
+            derivedIdx = self.derived_dict.getWordIdxInternal(word)
+            derivedWordX = self.derived_dict.getWord(derivedIdx)
+
+            if (getNormalWord(word).lower() == getNormalWord(derivedWordX).lower()):
+                words = self.derived_dict.getExplanations(word)
+                if len(words) > 1:
+                    return html_head + ("%s" % words) + html_tail
+                else:
+                    pass
+
+                    wordIdx = self.getWordIdxInternal(words[0])
+        start_ends = self.getStartEnds(wordIdx)
+        defs = []
+
+        n_entries = 10
+        minIdx = max(wordIdx - n_entries / 2, 0)
+        maxIdx = min(wordIdx + n_entries / 2 + 1, self.mTotalEntries)
+
+        table = []
+        for i in range(minIdx, maxIdx):
+            word = self.getWord(i)
+            table.append("<tr><td><a href='%s'>%s</a></td></tr>" % (word, word if i != wordIdx else ("<span style='color: red'>%s</span>" % word)))
+
+        table_str = "<table>" + ''.join(table) + "</table>"
+
+        if start_ends:
+            for p in start_ends:
+                (start, end) = p
+                self.crossdict_dict.seek(start);
+                str = self.crossdict_dict.read(end - start)
+                defs.append(str.replace('ALIGN="center" WIDTH="100%"', ''))
+            return html_head + '<table><tr><td class="topAlign left-panel">' + table_str + '</td><td class="topAlign"><div>' +  ''.join(defs) + '</div></td></tr></table>' + html_tail
+
+        return ""
+
+    def getExplanations(self, word):
+        start_ends = self.getStartEnds(self.getWordIdxInternal(word))
+        defs = []
+
+        if start_ends:
+            for p in start_ends:
+                (start, end) = p
+                self.crossdict_dict.seek(start)
+                str = self.crossdict_dict.read(end - start)
+                defs.append(str)
+            return defs
+        return []
+
+    def write_dict(self, entries, entry_defs, newDict, newIdx, newIi):
+        def_start_end_map = {}
+        for word in entries:
+            norm_low_word = getNormalWord(word).lower()
+            uniq_defs = entry_defs[norm_low_word]
+
+            newIdx.write(word)
+            newIdx.write(chr(0))
+            newIi.write(struct.pack("!I", newIdx.tell()))
+            try:
+                newIdx.write(chr(len(uniq_defs)))
+            except:
+                print "%s:%d: word is %s, uniq_defs is %s" % (inspect.stack()[0][1], inspect.stack()[0][2], word, uniq_defs)
+
+            start = end = 0
+            for d in uniq_defs:
+                if d in def_start_end_map:
+                    (start, end) = def_start_end_map[d]
+                else:
+                    start = newDict.tell()
+                    newDict.write(d)
+                    end = newDict.tell()
+                    def_start_end_map[d] = (start, end)
+                newIdx.write(struct.pack("!I", start))
+                newIdx.write(struct.pack("!I", end))
+
+
+    def uniq_ahd(self):
+
+        newDict = open(os.path.expanduser("~/src/ahd/ahd.dz2"), "w")
+        newIdx = open(os.path.expanduser("~/src/ahd/ahd.idx2"), "w")
+        newIi = open(os.path.expanduser("~/src/ahd/ahd.ii2"), "w")
+
+        derived_word_map = {}
+        ordered_word_defs = OrderedSet()
+        word_defs = {}
+        entries = OrderedSet()
+        derived_entries = OrderedSet()
+        nl_entry_defs = {}
+        for i in range(0, self.mTotalEntries):
+            word = self.getWord(i)
+
+            if i % 1000 == 0:
+                print "%s:%d: word is %s" % (inspect.stack()[0][1], inspect.stack()[0][2], word)
+
+            norm_low_word = getNormalWord(word).lower()
+            entries.add(word)
+            if norm_low_word not in nl_entry_defs:
+                nl_entry_defs[norm_low_word] = OrderedSet()
+            defs_map = {}
+            defs = self.getExplanations(word)
+            uniq_defs = []
+            for d in range(0, len(defs)):
+                defs[d] = ''.join(defs[d].split("\r"))
+                if not defs[d] in defs_map:
+                    defs_map[defs[d]] = 1
+                    uniq_defs.append(defs[d])
+                else:
+                    print "%s:%d: word %s has dups" % (inspect.stack()[0][1], inspect.stack()[0][2], word)
+
+            for d in uniq_defs:
+                nl_entry_defs[norm_low_word].add(d)
+                d = ''.join(d.split('&#183;'))
+                d = ''.join(d.split('<FONT FACE="Minion New">&#57375;</FONT>'))
+                for derived_word in re.findall(r'<FONT SIZE="-1" FACE="arial,sans-serif">(?:<FONT COLOR="#229966">)?(.*?)</FONT>', d):
+                    if derived_word != word and \
+                    '&' not in derived_word and \
+                    '<' not in derived_word and \
+                    len(derived_word) > 1 and \
+                    derived_word != ', ':
+                        derived_word = getNormalWord(derived_word).lower()
+                        if derived_word not in derived_word_map:
+                            derived_word_map[derived_word] = OrderedSet()
+                        derived_word_map[derived_word].add(word)
+                        derived_entries.add(derived_word)
+
+        self.write_dict(entries, nl_entry_defs, newDict, newIdx, newIi)
+        newDict = open(os.path.expanduser("~/src/ahd/derive.dz"), "w")
+        newIdx = open(os.path.expanduser("~/src/ahd/derive.idx"), "w")
+        newIi = open(os.path.expanduser("~/src/ahd/derive.ii"), "w")
+        derived_entries -= entries
+
+
+        derived_entries=list(derived_entries)
+        derived_entries.sort(cmp=ncasecmp)
+        self.write_dict(derived_entries, derived_word_map, newDict, newIdx, newIi)
+
 
 if __name__ == '__main__':
-    # uniq_ahd()
-    print getExplanation(sys.argv[1])
+    if len(sys.argv) == 1:
+        self.uniq_ahd()
+    else:
+        cd = CrossDict('ahd')
+        print cd.getExplanation(sys.argv[1])
+    # for x in range(0, 1000):
+         # print self.getWordInternal(x)
 

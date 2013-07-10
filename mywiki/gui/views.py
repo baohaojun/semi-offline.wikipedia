@@ -2,6 +2,8 @@ from django.http import *
 import os, re, urllib, subprocess
 import crossdict
 
+ahd = crossdict.CrossDict("ahd")
+
 def index(request):
     return article(request, "Wikipedia")
 
@@ -30,11 +32,11 @@ def article(request, lang, article):
 
 def do_dict(request, entry):
     entry = entry.encode('utf-8')
-    return HttpResponse(crossdict.getExplanation(entry))
+    return HttpResponse(ahd.getExplanation(entry))
 
 def do_dict_defs(request, entry):
     entry = entry.encode('utf-8')
-    return crossdict.getExplanation(entry)
+    return ahd.getExplanation(entry)
 
 def do_dict_defs_sub(request, entry, sub_entry):
     entry = entry.encode('utf-8')
