@@ -2,7 +2,7 @@ from django.http import *
 import os, re, urllib, subprocess
 import crossdict
 
-ahd = crossdict.CrossDict("ahd")
+ahd = crossdict.CrossDict("ahd", "derive")
 
 def index(request):
     return article(request, "Wikipedia")

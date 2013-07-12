@@ -27,13 +27,13 @@ def compareToIgnoreCase(w1, w2):
         return 1
 
 class CrossDict:
-    def __init__(self, dict_name):
+    def __init__(self, dict_name, derived_name = None):
         self.crossdict_dict = open(os.path.expanduser("~/src/ahd/%s.dz" % dict_name))
         self.index = open(os.path.expanduser("~/src/ahd/%s.idx" % dict_name))
         self.ii = open(os.path.expanduser("~/src/ahd/%s.ii" % dict_name))
         self.mTotalEntries = os.stat(os.path.expanduser("~/src/ahd/%s.ii" % dict_name)).st_size / 4
-        if dict_name == 'ahd':
-            self.derived_dict = CrossDict('derive')
+        if derived_name:
+            self.derived_dict = CrossDict(derived_name)
         else:
             self.derived_dict = None
 
@@ -141,8 +141,6 @@ class CrossDict:
                 if len(words) > 1:
                     return html_head + ("%s" % words) + html_tail
                 else:
-                    pass
-
                     wordIdx = self.getWordIdxInternal(words[0])
         start_ends = self.getStartEnds(wordIdx)
         defs = []
@@ -186,14 +184,14 @@ class CrossDict:
         for word in entries:
             norm_low_word = getNormalWord(word).lower()
             uniq_defs = entry_defs[norm_low_word]
+            if len(uniq_defs) > 255:
+                print "%s:%d: word is %s, uniq_defs is %s" % (inspect.stack()[0][1], inspect.stack()[0][2], word, uniq_defs)
+                continue
 
             newIdx.write(word)
             newIdx.write(chr(0))
             newIi.write(struct.pack("!I", newIdx.tell()))
-            try:
-                newIdx.write(chr(len(uniq_defs)))
-            except:
-                print "%s:%d: word is %s, uniq_defs is %s" % (inspect.stack()[0][1], inspect.stack()[0][2], word, uniq_defs)
+            newIdx.write(chr(len(uniq_defs)))
 
             start = end = 0
             for d in uniq_defs:
@@ -245,7 +243,7 @@ class CrossDict:
                 nl_entry_defs[norm_low_word].add(d)
                 d = ''.join(d.split('&#183;'))
                 d = ''.join(d.split('<FONT FACE="Minion New">&#57375;</FONT>'))
-                for derived_word in re.findall(r'<FONT SIZE="-1" FACE="arial,sans-serif">(?:<FONT COLOR="#229966">)?(.*?)</FONT>', d):
+                for derived_word in re.findall(r'<FONT SIZE="-1" FACE="arial,sans-serif">(?:<I>)?(?:<FONT COLOR="#229966">)?(?:<I>)?(.*?)(?:</I>)?</FONT>', d):
                     if derived_word != word and \
                     '&' not in derived_word and \
                     '<' not in derived_word and \
@@ -271,10 +269,20 @@ class CrossDict:
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        self.uniq_ahd()
-    else:
+        print "Uasge: crossdict.py cmd"
+        exit()
+        
+    elif sys.argv[1] == "uniq":
         cd = CrossDict('ahd')
-        print cd.getExplanation(sys.argv[1])
+        cd.uniq_ahd()
+    elif sys.argv[1] == "list":
+        dd = CrossDict('derive')
+        for i in range(0, dd.mTotalEntries):
+            word = dd.getWord(i)
+            print "%s: %s" % (dd.getWord(i), dd.getExplanations(word))
+    elif sys.argv[1] == "look":
+        cd = CrossDict('ahd')
+        print cd.getExplanation(sys.argv[2])
     # for x in range(0, 1000):
          # print self.getWordInternal(x)
 
