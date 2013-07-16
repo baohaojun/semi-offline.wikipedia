@@ -243,6 +243,7 @@ class CrossDict:
                 nl_entry_defs[norm_low_word].add(d)
                 d = ''.join(d.split('&#183;'))
                 d = ''.join(d.split('<FONT FACE="Minion New">&#57375;</FONT>'))
+                d = ''.join(d.split('<FONT FACE="Minion New">&#8242;</FONT>'))
                 for derived_word in re.findall(r'<FONT SIZE="-1" FACE="arial,sans-serif">(?:<I>)?(?:<FONT COLOR="#229966">)?(?:<I>)?(.*?)(?:</I>)?</FONT>', d):
                     if derived_word != word and \
                     '&' not in derived_word and \
