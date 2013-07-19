@@ -28,10 +28,10 @@ def compareToIgnoreCase(w1, w2):
 
 class CrossDict:
     def __init__(self, dict_name, derived_name = None):
-        self.crossdict_dict = open(os.path.expanduser("~/src/ahd/%s.dz" % dict_name))
-        self.index = open(os.path.expanduser("~/src/ahd/%s.idx" % dict_name))
-        self.ii = open(os.path.expanduser("~/src/ahd/%s.ii" % dict_name))
-        self.mTotalEntries = os.stat(os.path.expanduser("~/src/ahd/%s.ii" % dict_name)).st_size / 4
+        self.crossdict_dict = open(os.path.expanduser("~/src/github/ahd/%s.dz" % dict_name))
+        self.index = open(os.path.expanduser("~/src/github/ahd/%s.idx" % dict_name))
+        self.ii = open(os.path.expanduser("~/src/github/ahd/%s.ii" % dict_name))
+        self.mTotalEntries = os.stat(os.path.expanduser("~/src/github/ahd/%s.ii" % dict_name)).st_size / 4
         if derived_name:
             self.derived_dict = CrossDict(derived_name)
         else:
@@ -208,9 +208,9 @@ class CrossDict:
 
     def uniq_ahd(self):
 
-        newDict = open(os.path.expanduser("~/src/ahd/ahd.dz2"), "w")
-        newIdx = open(os.path.expanduser("~/src/ahd/ahd.idx2"), "w")
-        newIi = open(os.path.expanduser("~/src/ahd/ahd.ii2"), "w")
+        newDict = open(os.path.expanduser("~/src/github/ahd/ahd.dz2"), "w")
+        newIdx = open(os.path.expanduser("~/src/github/ahd/ahd.idx2"), "w")
+        newIi = open(os.path.expanduser("~/src/github/ahd/ahd.ii2"), "w")
 
         derived_word_map = {}
         ordered_word_defs = OrderedSet()
@@ -257,9 +257,9 @@ class CrossDict:
                         derived_entries.add(derived_word)
 
         self.write_dict(entries, nl_entry_defs, newDict, newIdx, newIi)
-        newDict = open(os.path.expanduser("~/src/ahd/derive.dz"), "w")
-        newIdx = open(os.path.expanduser("~/src/ahd/derive.idx"), "w")
-        newIi = open(os.path.expanduser("~/src/ahd/derive.ii"), "w")
+        newDict = open(os.path.expanduser("~/src/github/ahd/derive.dz"), "w")
+        newIdx = open(os.path.expanduser("~/src/github/ahd/derive.idx"), "w")
+        newIi = open(os.path.expanduser("~/src/github/ahd/derive.ii"), "w")
         derived_entries -= entries
 
 
