@@ -153,7 +153,18 @@ class CrossDict:
         table = []
         for i in range(minIdx, maxIdx):
             word = self.getWord(i)
-            table.append("<tr><td><a href='%s'>%s</a></td></tr>" % (urllib.quote(word), word if i != wordIdx else ("<span style='color: red'>%s</span>" % word)))
+            prefix = "&nbsp;"
+            if i == wordIdx - 1:
+                prefix = "&lt;"
+            elif i == wordIdx + 1:
+                prefix = "&gt;"
+            elif i == wordIdx:
+                prefix = "="
+
+            table.append("<tr><td><a href='%s'><span style='font-family: monospace;'>%s%s</span></a></td></tr>" % (
+                urllib.quote(word),
+                prefix,
+                word))
 
         table_str = "<table>" + ''.join(table) + "</table>"
 
