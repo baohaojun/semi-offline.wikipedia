@@ -4,6 +4,7 @@ import sys
 import struct
 import unicodedata
 import inspect
+import urllib
 from OrderedSet import OrderedSet
 
 def getNormalWord(word):
@@ -152,7 +153,7 @@ class CrossDict:
         table = []
         for i in range(minIdx, maxIdx):
             word = self.getWord(i)
-            table.append("<tr><td><a href='%s'>%s</a></td></tr>" % (word, word if i != wordIdx else ("<span style='color: red'>%s</span>" % word)))
+            table.append("<tr><td><a href='%s'>%s</a></td></tr>" % (urllib.quote(word), word if i != wordIdx else ("<span style='color: red'>%s</span>" % word)))
 
         table_str = "<table>" + ''.join(table) + "</table>"
 
