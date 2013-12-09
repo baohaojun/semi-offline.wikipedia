@@ -143,6 +143,31 @@ class CrossDict:
                     return html_head + ("%s" % words) + html_tail
                 else:
                     wordIdx = self.getWordIdxInternal(words[0])
+            else:
+                def find_by_distance():
+                    word_nl = getNormalWord(word).lower()
+                    min_dist = 10
+                    min_dist_word_idx = wordIdx
+                    import Levenshtein
+                    for i in range(0, self.mTotalEntries):
+                        word_ = getNormalWord(self.getWord(i)).lower()
+                        dist = Levenshtein.distance(word_nl, word_)
+                        if dist == 1:
+                            return i
+                        if dist < min_dist:
+                            min_dist = dist
+                            min_dist_word_idx = i
+                    return min_dist_word_idx
+
+                def find_close_match():
+                    if word.find(' ') >= 0:
+                        word_ = word.replace(' ', '-')
+                        wordIdx_ = self.getWordIdxInternal(word_)
+                        if (word_.lower() == getNormalWord(self.getWord(wordIdx_)).lower()):
+                            return wordIdx_
+                    return find_by_distance()
+                wordIdx = find_close_match()
+
         start_ends = self.getStartEnds(wordIdx)
         defs = []
 
