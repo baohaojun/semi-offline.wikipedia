@@ -157,6 +157,17 @@ class CrossDict:
                         if dist < min_dist:
                             min_dist = dist
                             min_dist_word_idx = i
+                    for i in range(0, self.derived_dict.mTotalEntries):
+                        word_ = getNormalWord(self.derived_dict.getWord(i)).lower()
+                        dist = Levenshtein.distance(word_nl, word_)
+                        if dist == 1:
+                            words = self.derived_dict.getExplanations(word_)
+                            return self.getWordIdxInternal(words[0])
+                        if dist < min_dist:
+                            min_dist = dist
+                            words = self.derived_dict.getExplanations(word_)
+                            min_dist_word_idx = self.getWordIdxInternal(words[0])
+
                     return min_dist_word_idx
 
                 def find_close_match():
