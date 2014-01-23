@@ -279,10 +279,12 @@ class CrossDict:
             # <A HREF="PrefixToTheXREFk_a=..article&amp;view=Search&amp;fileName=O033.htm&amp;articleID=O0146000">O<FONT FACE="Minion New">&#347;</FONT>wi<FONT FACE="Minion New">&#281;</FONT>cim</A>
             r1 = r'<A HREF="PrefixToTheXREFk_a=..article&amp;view=Search&amp;fileName=(.*?).htm">'
             r2 = r'<IMG BORDER="0" SRC="PrefixToTheXREFk_a=..article&amp;view=Search&amp;fileName=JPG/(.*?).jpg">'
+            r3 = r'<A HREF="dict-imagesx/LATHalphab.jpg"><IMG SRC="dict-imagesx/THalphab.jpg"><BR><IMG SRC="dict-imagesx/THalphad.jpg"></A>'
             for d in defs:
                 if word == "alphabet":
                     d = re.sub(r1, "<A HREF=\"dict-imagesx/LATH\\1.jpg\">", d)
                     d = re.sub(r2, "<IMG SRC=\"dict-imagesx/\\1.jpg\">", d)
+                    d = re.sub(r3, '<A HREF="dict-imagesx/LATHalphab.jpg"><IMG SRC="dict-imagesx/THalphab.jpg"></A><BR><A HREF="dict-imagesx/LATHalphad.jpg"><IMG SRC="dict-imagesx/THalphad.jpg"></A>', d)
                 d = re.sub(r'<A HREF="PrefixToTheXREFk_a.*?>(.*?)</A>', "\1", d);
                 d = re.sub(r'<FONT COLOR=>', '<FONT>', d)
                 d = re.sub(r'FACE="arial,sans-serif"', '', d)
