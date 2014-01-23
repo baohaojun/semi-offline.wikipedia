@@ -294,10 +294,13 @@ class CrossDict:
                     d = d[:-1]
                 if d[0:6] == "<FONT>" and d[-7:] == "</FONT>":
                     d = d[6:-7] + "\n"
-                d = re.sub(r'<FONT SIZE="-1"\s*>', '<FONT style="font-size: 85%">', d)
-                d = re.sub(r'<FONT SIZE="-2"\s*>', '<FONT style="font-size: 70%">', d)
+                d = re.sub(r'<FONT SIZE="-1"\s*>', '<span class="small">', d)
+                d = re.sub(r'<FONT SIZE="-2"\s*>', '<span class="x-small">', d)
 
-                d = '<div class="crossdict">' + d + "</div>\n"
+                d = re.sub(r'<FONT COLOR="#229966">', '<span class="def">', d)
+                d = re.sub(r'<FONT COLOR="">', '<span class="ref">', d)
+                d = re.sub(r'<FONT FACE="Minion New">', '<span class="symbol">', d)
+                d = re.sub(r'</FONT>', '</span>', d)
 
                 entry_defs[norm_low_word].add(d)
         self.write_dict(entries, entry_defs, newDict, newIdx, newIi)
