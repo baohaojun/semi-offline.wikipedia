@@ -8,6 +8,87 @@ import inspect
 import urllib
 from OrderedSet import OrderedSet
 
+html_head = "<html> <head> <link rel='stylesheet' href='dict.css' type='text/css'> <script src='jquery.js'></script> <script src='rangy-core.js'></script> <script src='rangy-serializer.js'></script> <script src='android.selection.js'></script> </head> <body>"
+
+html_tail = "</body></html>"
+
+last_regexp = ''
+last_matches = []
+
+the_ahd_dict = None
+def build_table(words, the_word):
+    table = []
+    i = 0
+    for word in words:
+        if the_word == word:
+            break
+        i = i + 1
+    wordIdx = i
+    for idx in range(0, len(words)):
+        prefix = "&nbsp;"
+        if idx == wordIdx - 1:
+            prefix = "&lt;"
+        elif idx == wordIdx + 1:
+            prefix = "&gt;"
+        elif idx == wordIdx:
+            prefix = "="
+
+        table.append("<tr><td><a href='%s'><span style='font-family: monospace;'>%s%s</span></a></td></tr>" % (
+            urllib.quote(words[idx]).replace('/', "%2f"),
+            prefix,
+            words[idx]))
+    return table
+
+def build_regexp_output(crossd, last_matches, start, end, word_to_look):
+    table_words = []
+    for i in range(start, end):
+        if i < 0 or i >= len(last_matches):
+            continue
+        global last_regexp
+        table_words.append("/%s/%s" % (last_regexp, last_matches[i]))
+
+    table_str = "<table>" + ''.join(build_table(table_words, ("/%s/%s" % (last_regexp, word_to_look)))) + "</table>"
+
+    wordIdx = crossd.getWordIdxInternal(word_to_look)
+
+    start_ends = crossd.getStartEnds(wordIdx)
+    defs = []
+    if start_ends:
+        for p in start_ends:
+            (start, end) = p
+            crossd.crossdict_dict.seek(start);
+            str = crossd.crossdict_dict.read(end - start)
+            defs.append(str.replace('ALIGN="center" WIDTH="100%"', ''))
+        return html_head + '<table><tr><td class="topAlign left-panel">' + table_str + '</td><td class="topAlign"><div>' +  ''.join(defs) + '</div></td></tr></table>' + html_tail
+
+
+def getRegExpExplanation(crossd, word):
+    regexp = word
+    word_to_look = ''
+    if word.find('/') >= 0:
+        regexp = word[:word.find('/')]
+        word_to_look = word[word.find('/') + 1:]
+    global last_regexp, last_matches
+    if last_regexp != regexp:
+        last_regexp = regexp
+        last_matches = []
+        compiled_re = re.compile(last_regexp)
+        for i in range(0, crossd.mTotalEntries):
+            if compiled_re.search(crossd.getWord(i)):
+                last_matches.append(crossd.getWord(i))
+        return build_regexp_output(crossd, last_matches, 0, 10, last_matches[0])
+    elif word_to_look:
+        i = 0
+        for matches in last_matches:
+            if matches == word_to_look:
+                break
+            i = i + 1
+
+        return build_regexp_output(crossd, last_matches, max(0, i - 5), max(10, i + 5), word_to_look)
+
+def getDefinesExplanation(word):
+    pass
+
 def getNormalWord(word):
     return unicodedata.normalize(
         'NFKD', word.decode('utf-8')
@@ -126,11 +207,13 @@ class CrossDict:
         return start_ends;
 
     def getExplanation(self, word):
-        html_head = "<html> <head> <link rel='stylesheet' href='dict.css' type='text/css'> <script src='jquery.js'></script> <script src='rangy-core.js'></script> <script src='rangy-serializer.js'></script> <script src='android.selection.js'></script> </head> <body>"
-
-        html_tail = "</body></html>"
 
         word = word.strip()
+        if word.startswith('/'):
+            return getRegExpExplanation(self, word[1:])
+        elif word.startswith('?'):
+            return getDefinesExplanation(word[1:])
+
         wordIdx = self.getWordIdxInternal(word)
         wordX = self.getWord(wordIdx)
 
@@ -187,23 +270,11 @@ class CrossDict:
         minIdx = max(wordIdx - n_entries / 2, 0)
         maxIdx = min(wordIdx + n_entries / 2 + 1, self.mTotalEntries)
 
-        table = []
+        table_words = []
         for i in range(minIdx, maxIdx):
-            word = self.getWord(i)
-            prefix = "&nbsp;"
-            if i == wordIdx - 1:
-                prefix = "&lt;"
-            elif i == wordIdx + 1:
-                prefix = "&gt;"
-            elif i == wordIdx:
-                prefix = "="
+            table_words.append(self.getWord(i))
 
-            table.append("<tr><td><a href='%s'><span style='font-family: monospace;'>%s%s</span></a></td></tr>" % (
-                urllib.quote(word),
-                prefix,
-                word))
-
-        table_str = "<table>" + ''.join(table) + "</table>"
+        table_str = "<table>" + ''.join(build_table(table_words, self.getWord(wordIdx))) + "</table>"
 
         if start_ends:
             for p in start_ends:
