@@ -13,6 +13,7 @@ html_head = "<html> <head> <link rel='stylesheet' href='dict.css' type='text/css
 html_tail = "</body></html>"
 
 last_regexp = ''
+last_usage_word = ''
 last_matches = []
 
 the_ahd_dict = None
@@ -39,15 +40,21 @@ def build_table(words, the_word):
             words[idx]))
     return table
 
-def build_regexp_output(crossd, last_matches, start, end, word_to_look):
+def build_regexp_or_usage_output(crossd, last_matches, start, end, word_to_look, is_usage = False):
     table_words = []
+    format = "/%s/%s"
+    global last_regexp, last_usage_word
+    last_stem = last_regexp
+    if is_usage:
+        format = "?%s?%s"
+        last_stem = last_usage_word
+
     for i in range(start, end):
         if i < 0 or i >= len(last_matches):
             continue
-        global last_regexp
-        table_words.append("/%s/%s" % (last_regexp, last_matches[i]))
+        table_words.append(format % (last_stem, last_matches[i]))
 
-    table_str = "<table>" + ''.join(build_table(table_words, ("/%s/%s" % (last_regexp, word_to_look)))) + "</table>"
+    table_str = "<table>" + ''.join(build_table(table_words, (format % (last_stem, word_to_look)))) + "</table>"
 
     wordIdx = crossd.getWordIdxInternal(word_to_look)
 
@@ -76,7 +83,7 @@ def getRegExpExplanation(crossd, word):
         for i in range(0, crossd.mTotalEntries):
             if compiled_re.search(crossd.getWord(i)):
                 last_matches.append(crossd.getWord(i))
-        return build_regexp_output(crossd, last_matches, 0, 10, last_matches[0])
+        return build_regexp_or_usage_output(crossd, last_matches, 0, 10, last_matches[0])
     elif word_to_look:
         i = 0
         for matches in last_matches:
@@ -84,10 +91,28 @@ def getRegExpExplanation(crossd, word):
                 break
             i = i + 1
 
-        return build_regexp_output(crossd, last_matches, max(0, i - 5), max(10, i + 5), word_to_look)
+        return build_regexp_or_usage_output(crossd, last_matches, max(0, i - 5), max(10, i + 5), word_to_look)
 
-def getDefinesExplanation(word):
-    pass
+def getDefinesExplanation(crossd, word):
+    usage_word = word
+    word_to_look = ''
+    if word.find('?') >= 0:
+        usage_word = word[:word.find('?')]
+        word_to_look = word[word.find('?') + 1:]
+    global last_usage_word, last_matches
+    if last_usage_word != usage_word:
+        last_usage_word = usage_word
+        last_matches = []
+        words = crossd.usage_dict.getExplanations(usage_word)[0]
+        last_matches = words.split(":")
+        return build_regexp_or_usage_output(crossd, last_matches, 0, 10, last_matches[0], True)
+    elif word_to_look:
+        i = 0
+        for matches in last_matches:
+            if matches == word_to_look:
+                break
+            i = i + 1
+        return build_regexp_or_usage_output(crossd, last_matches, max(0, i - 5), max(10, i + 5), word_to_look, True)
 
 def getNormalWord(word):
     return unicodedata.normalize(
@@ -115,6 +140,8 @@ class CrossDict:
         self.index = open(os.path.expanduser("~/src/github/ahd/%s.idx" % dict_name))
         self.ii = open(os.path.expanduser("~/src/github/ahd/%s.ii" % dict_name))
         self.mTotalEntries = os.stat(os.path.expanduser("~/src/github/ahd/%s.ii" % dict_name)).st_size / 4
+        if dict_name == "ahd":
+            self.usage_dict = CrossDict("usage")
         if derived_name:
             self.derived_dict = CrossDict(derived_name)
         else:
@@ -212,7 +239,7 @@ class CrossDict:
         if word.startswith('/'):
             return getRegExpExplanation(self, word[1:])
         elif word.startswith('?'):
-            return getDefinesExplanation(word[1:])
+            return getDefinesExplanation(self, word[1:])
 
         wordIdx = self.getWordIdxInternal(word)
         wordX = self.getWord(wordIdx)
@@ -457,5 +484,8 @@ if __name__ == '__main__':
     elif sys.argv[1] == "clean":
         cd = CrossDict('ahd')
         cd.clean_ahd()
+    elif sys.argv[1] == "usage":
+        cd = CrossDict('ahd')
+        print getDefinesExplanation(cd, sys.argv[2])
     # for x in range(0, 1000):
          # print self.getWordInternal(x)
