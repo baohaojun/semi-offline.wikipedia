@@ -233,6 +233,22 @@ class CrossDict:
 
         return start_ends;
 
+    def getWordRoot(self, word):
+        word_type = 'unknown'
+        if word.find(' in Indo-European roots') >= 0:
+            word = word[:word.find(' in Indo-European roots')]
+            word_type = 'Indo-European'
+        elif word.find(' in Semitic roots') >= 0:
+            word = word[:word.find(' in Semitic roots')]
+            word_type = 'Semitic'
+        if word.find("see ") == 0:
+            word = word[4:]
+        output = os.path.expanduser("~/src/github/ahd/extra/%s/%s.html" % (word_type, word))
+        os.system("ahd-get-word-root.pl '%s'" % output)
+        if os.path.exists(output):
+            html = open(output)
+            return html.read()
+
     def getExplanation(self, word):
 
         word = word.strip()
@@ -240,6 +256,9 @@ class CrossDict:
             return getRegExpExplanation(self, word[1:])
         elif word.startswith('?'):
             return getDefinesExplanation(self, word[1:])
+        elif word.find(' in Indo-European roots') >= 0 or \
+             word.find(' in Semitic roots') >= 0:
+            return self.getWordRoot(word)
 
         wordIdx = self.getWordIdxInternal(word)
         wordX = self.getWord(wordIdx)

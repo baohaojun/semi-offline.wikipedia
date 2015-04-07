@@ -22,7 +22,7 @@ def article(request, lang, article):
             cmd = ["./show.pl", lang]
             for i in range(2, 12):
                 cmd.append(res.group(i))
-            
+
             print cmd
             result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
             break
@@ -33,28 +33,6 @@ def article(request, lang, article):
 def do_dict(request, entry):
     entry = entry.encode('utf-8')
     return HttpResponse(ahd.getExplanation(entry))
-
-def do_dict_defs(request, entry):
-    entry = entry.encode('utf-8')
-    return ahd.getExplanation(entry)
-
-def do_dict_defs_sub(request, entry, sub_entry):
-    entry = entry.encode('utf-8')
-    cmd = ["dict-defines", entry, sub_entry]
-    result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
-    return HttpResponse(result)
-
-def do_dict_match(request, entry):
-    entry = entry.encode('utf-8')
-    cmd = ["dict-matching", entry]
-    result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
-    return HttpResponse(result)
-    
-def do_dict_matching_sub(request, entry, sub_entry):
-    entry = entry.encode('utf-8')
-    cmd = ["dict-matching", entry, sub_entry]
-    result = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
-    return HttpResponse(result)
 
 def search(request, lang, article):
     if type(article) is str:
@@ -67,7 +45,7 @@ def search(request, lang, article):
     print cmd
     for line in subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].split('\n'):
         if line:
-            lines.append(line[:]) 
+            lines.append(line[:])
     if len(lines) == 0:
         result = '<html><head><title>Wikipedia has nothing about this.</title>'
         result += '</head><body>Wikipedia has nothing about this.<br/>'
@@ -118,20 +96,7 @@ def searchbar(request, lang):
     searchData = request.GET['data'].encode('utf-8')
     return keyword(request, lang, searchData)
 
-def searchdict(request):
-    searchData = request.GET['data'].encode('utf-8')
-    return do_dict(request, searchData)
-
-def searchdict_def(request):
-    searchData = request.GET['data'].encode('utf-8')
-    return do_dict_defs(request, searchData)
-
-def searchdict_match(request):
-    searchData = request.GET['data'].encode('utf-8')
-    return do_dict_match(request, searchData)
-
 # Local Variables: #
 # tab-width: 4 #
 # python-indent: 4 #
 # End: #
- 
